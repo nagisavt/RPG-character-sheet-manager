@@ -3,3 +3,6 @@ node_modules/
 
 # symlinks gerados por `npx skills` — recriaveis a partir de .agents/
 .claude/
+
+# o Log da Mesa local, criado por `npm run dev`
+dados/

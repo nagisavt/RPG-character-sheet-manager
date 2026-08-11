@@ -1,0 +1,153 @@
+import { createServer, type Server as ServidorHttp } from "node:http";
+import { Server as ServidorSocket, type Socket } from "socket.io";
+import type { Comando, Resposta } from "../shared/comandos.js";
+import { estadoInicial } from "../shared/estado.js";
+import {
+  autorDe,
+  type Apresentacao,
+  type Identidade,
+  type Snapshot,
+  type Transmissao,
+} from "../shared/identidade.js";
+import { reconstruir, reducer } from "../shared/reducer.js";
+import { MESA_ID, type Estado, type Ficha } from "../shared/tipos.js";
+import { podeVer } from "./audiencia.js";
+import { autorizar } from "./autorizacao.js";
+import { decisor } from "./decisor.js";
+import { abrirStore, type Store } from "./store.js";
+
+export type OpcoesDoServidor = {
+  fichas: readonly Ficha[];
+  /** O arquivo SQLite onde o Log mora. Ele sobrevive ao processo: é o que reconstrói o estado. */
+  caminhoDoLog: string;
+  senhaDoMestre: string;
+  /** `0` pede uma porta livre ao sistema. A porta de verdade sai em `servidor.porta`. */
+  porta?: number;
+};
+
+export type Servidor = {
+  porta: number;
+  /** O estado da Mesa, em memória. O SQLite guarda só o Log. */
+  readonly estado: Estado;
+  log: () => ReturnType<Store["ler"]>;
+  encerrar: () => Promise<void>;
+};
+
+type Sessao = { identidade: Identidade };
+
+export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servidor> => {
+  const store = abrirStore({ caminho: opcoes.caminhoDoLog });
+
+  // Na subida, o estado é o Log dobrado sobre as Fichas. Reiniciar o servidor
+  // no meio da Sessão custa segundos e não perde nada.
+  const log = store.ler();
+  let estado = reconstruir(estadoInicial(opcoes.fichas), log);
+  let ate = log.at(-1)?.id ?? 0;
+
+  const http = createServer();
+  const io = new ServidorSocket<{ comando: ComandoDoCliente }, EventosDoServidor, never, Sessao>(
+    http,
+    { serveClient: false },
+  );
+
+  const telasLigadas = () => io.of("/").sockets.values();
+
+  io.use((socket, seguir) => {
+    const identidade = identificar(socket.handshake.auth as Apresentacao, opcoes);
+    if (typeof identidade === "string") return seguir(new Error(identidade));
+    socket.data.identidade = identidade;
+    seguir();
+  });
+
+  io.on("connection", (socket) => {
+    socket.emit("snapshot", { estado, ate });
+    socket.on("comando", (comando, responder) => responder(processar(socket, comando)));
+  });
+
+  const processar = (socket: Socket<never, EventosDoServidor, never, Sessao>, comando: Comando) => {
+    const { identidade } = socket.data;
+
+    const autorizacao = autorizar(identidade, comando.tipo);
+    if (!autorizacao.aceito) return autorizacao;
+
+    const autor = autorDe(identidade);
+    if (autor === null) return { aceito: false, motivo: "Esta tela não envia Comandos" } as const;
+
+    const decisao = decisor(estado, comando, autor);
+    if ("recusa" in decisao) return { aceito: false, motivo: decisao.recusa } as const;
+
+    for (const novo of decisao.eventos) {
+      const evento = store.gravar(novo);
+      estado = reducer(estado, evento);
+      ate = evento.id;
+      // O broadcast acontece antes do ack: quando quem mandou o Comando recebe
+      // "aceito", a própria transmissão dele já chegou.
+      for (const tela of telasLigadas()) {
+        const visivel = podeVer(evento, tela.data.identidade);
+        tela.emit("transmissao", { ate: evento.id, evento: visivel ? evento : null });
+      }
+    }
+    return { aceito: true } as const;
+  };
+
+  await new Promise<void>((pronto) => http.listen(opcoes.porta ?? 0, pronto));
+
+  return {
+    porta: portaDe(http),
+    get estado() {
+      return estado;
+    },
+    log: () => store.ler(),
+    encerrar: async () => {
+      await io.close();
+      store.fechar();
+    },
+  };
+};
+
+/**
+ * A identidade é amarrada aqui, uma vez, e nunca mais lida do conteúdo de um
+ * Comando. Devolve a `Identidade` ou o motivo da recusa.
+ */
+const identificar = (apresentacao: Apresentacao, opcoes: OpcoesDoServidor): Identidade | string => {
+  if (apresentacao.mesaId !== MESA_ID) return "Mesa desconhecida";
+
+  switch (apresentacao.como) {
+    case "mestre":
+      // A senha vem de variável de ambiente e nunca do cliente.
+      return apresentacao.senha === opcoes.senhaDoMestre ? { como: "mestre" } : "Senha incorreta";
+
+    case "jogador": {
+      // A identidade do jogador é declarada, não provada: cinco pessoas na mesma
+      // sala, sem PIN. O que se exige é que o personagem exista nas Fichas.
+      const personagem = apresentacao.personagem;
+      if (typeof personagem !== "string") return "Falta dizer qual personagem";
+      if (!opcoes.fichas.some((ficha) => ficha.id === personagem)) {
+        return `Personagem desconhecido: ${personagem}`;
+      }
+      return { como: "jogador", personagem };
+    }
+
+    case "mesa":
+      // A TV abre sem senha nenhuma: ligar a tela é abrir o navegador.
+      return { como: "mesa" };
+
+    default:
+      return "Handshake sem identidade";
+  }
+};
+
+const portaDe = (http: ServidorHttp): number => {
+  const endereco = http.address();
+  if (endereco === null || typeof endereco === "string") {
+    throw new Error("O servidor subiu sem porta TCP");
+  }
+  return endereco.port;
+};
+
+type ComandoDoCliente = (comando: Comando, responder: (resposta: Resposta) => void) => void;
+
+type EventosDoServidor = {
+  snapshot: (snapshot: Snapshot) => void;
+  transmissao: (transmissao: Transmissao) => void;
+};
