@@ -1,131 +1,184 @@
----
-tags: [projeto, rpg, dnd]
----
-
 # RPG Mesa - Ideias
 
-> Captura rápida. Nada sai de "Depois" pra "v1" antes da sessão 1 acontecer.
+> **Este arquivo é backlog de ideias, não especificação.**
+>
+> - O v1 é **só** o que está marcado `[v1]`. Todo o resto é contexto futuro.
+> - Itens em **Decisões fechadas** não precisam ser revisitados — foram discutidos e resolvidos.
+> - Itens em **Em aberto** são onde o grill deve gastar tempo.
+> - Nada sai de `[s2]`/`[s3]`/Depois pra `[v1]` antes da sessão 1 acontecer.
 
-## Funcionalidades - Jogador
+## Contexto
 
-- Ver a própria ficha completa
-- Vida atual (botões de toque, sem digitar)
-- Mochila com itens
-- Sistema de cintos/bolso/pochete (itens preparados)
-- Clicar no item → descrição do que ele faz
-- Magias com descrição
-- Slots de magia visíveis por círculo (gastos/total)
-- Botão de conjurar: desconta o slot, avisa se falta mão livre ou componente
-- Buffs e debuffs ativos (ícone, clicou → descrição)
-- Ver os colegas: vida dos outros
+App de gerenciamento de mesa de D&D 5.5 (regras 2024) pra uso **presencial**, grupo joga a cada ~15 dias.
+Servidor roda no notebook do mestre, rede local, sem hospedagem.
+
+Três clientes no mesmo servidor:
+
+- `/mesa` — TV no meio da mesa, só leitura, informação pública
+- `/jogador` — celular, ficha privada, mobile-first
+- `/mestre` — notebook, comandos, log, controle total
+
+Prazo: primeira sessão em ~2 meses. Sessão de teste 1 mês antes.
+
+---
+
+## Decisões fechadas
+
+*Não revisitar. Já discutido.*
+
+### Arquitetura
+
+- Monolito: um processo Node, um SQLite, um `npm run dev`. Sem Redis, sem fila, sem microserviço — são 5 pessoas numa sala.
+- Node + TypeScript + Socket.IO + SQLite + React
+- Fluxo único: **comando → decisor → evento → broadcast → reducer**
+- `decisor(estado, comando) => evento[]` e `reducer(estado, evento) => estado` são **funções puras**, sem banco/socket/relógio
+- `reducer` roda no servidor **e** no cliente, mesmo arquivo em `shared/` (é o motivo de TS nos dois lados)
+- Estado vive em memória; SQLite guarda só o log **append-only**. Na subida: `eventos.reduce(reducer, inicial)`
+- Filtro de audiência por evento: `publico` / `privado:personagem` / `mestre` — servidor projeta visão diferente por socket, não esconde no CSS
+- Reconexão: snapshot completo filtrado, depois só deltas
+- Identidade amarrada no **handshake** (`mesaId`, `personagem`, `pin`), nunca no conteúdo do comando
+- Catálogo (magia/item/monstro do SRD) é read-only e **não** vira evento. Só estado da mesa entra no log.
+- Dados do SRD 5.2.1 (2024, CC-BY) via Open5e v2 → seed local no SQLite, sem chamar API durante a sessão
+
+### Estrutura de pastas
+
+```
+shared/    comandos.ts, eventos.ts, estado.ts, reducer.ts
+server/    socket.ts, autorizacao.ts, decisor.ts, store.ts, audiencia.ts, catalogo/
+web/       mesa/, jogador/, mestre/
+```
+
+### Produto
+
+- **Regra dura:** nada no v1 pode ser ponto único de falha da sessão. Caiu, volta pro papel.
+- **Este app não é um cadastrador de fichas.** Tela de CRUD de ficha está fora do escopo, agora e depois. A ficha é digitalizada à mão num arquivo versionado do repo.
+- **Princípio: avisar, não bloquear.** "Você não tem mão livre" em vermelho, botão continua clicável.
+- Servidor **informa** custo de ação, não policia economia de turno.
+- **O app registra e exibe, nunca decide o que aconteceu.** Sem rolagem de dado pra ninguém, sem decidir acerto ou dano, sem efeito automático. Contabilidade que decorre de um fato já declarado é permitida, e a lista dela é fechada. Ver [ADR-0001](docs/adr/0001-o-app-registra-e-exibe-nunca-decide.md).
+  - ~~Monstro do mestre rola automático~~ — derrubado. O mestre digita a iniciativa do monstro, como todo mundo.
+  - Iniciativa do jogador: popup pra digitar **o resultado do dado**, app faz a soma. É a única aritmética que existe.
+- Sem modo "entrar no personagem" na UI — o comando já faz e registra como mestre no log.
+
+### House rules (avisar a mesa antes da sessão 1)
+
+1. Acesso a container custa ação (mochila) / ação bônus (cinto). O livro dá 1 interação livre por turno.
+2. Sobrecarga por peso (regra opcional do DMG, não padrão).
+3. Componente material com custo segue a regra de container acima.
+
+---
+
+## Interface — tela do jogador
+
+*Decisões fechadas. Detalhe visual sai do protótipo, não deste arquivo.*
+
+### O que ela não é
+
+**Não é uma ficha de D&D digitalizada.** É uma tela de inventário de videogame. Sem tabelas, sem planilha, sem formulário.
+
+### Navegação: hub + modais
+
+- **Hub**: personagem de corpo inteiro + vida atual. Só isso.
+- Botões do hub abrem **modais**, e sempre volta pro hub:
+  - Inventário
+  - Magias
+  - Bloco de notas
+- No celular o modal ocupa a tela inteira; no notebook fica centralizado. **Mesma interface, um breakpoint** — não são dois apps.
+- Quem tiver notebook usa notebook, quem não tiver usa o navegador do celular.
+
+### Inventário
+
+- **Abas dentro do modal**: Equipado / Mochila / Cinto
+- **Equipado**: slots fixos estilo Diablo (luvas, botas, peito, etc.) sobre uma silhueta padrão
+  - slots são **posições fixas na tela**, não coordenadas relativas ao desenho — anão e meio-elfo não podem mover slot de lugar
+  - trocar a silhueta depois é trocar uma imagem de fundo, nada se mexe
+- **Mochila**: lista (nome, peso, valor). A mochila em si é um item equipável, trocável por uma melhor.
+- **Cinto**: lista curta, com os slots visíveis
+- **Tocar no item abre o detalhe.** Sem hover — hover não existe no celular, e a interação tem que ser a mesma nos dois aparelhos.
+
+### Assets e placeholders
+
+- **Todo asset tem caminho e nome desde o dia 1**: `assets/personagens/thorin.png`, `assets/itens/mochila.png`, `assets/slots/luvas.png`
+- O código **sempre** pede o arquivo. O que muda com o tempo é se aquele arquivo tem desenho ou é placeholder — nunca o código.
+- Placeholder no protótipo: retângulo **preto** com rótulo em cinza claro. Fundo do app é escuro (mesa mal iluminada + visual de inventário de jogo), então quadrado branco vira lanterna na cara.
+- Gerar os PNGs de placeholder de verdade e commitar — evita caminho quebrado e estado especial no código.
+- Ícones: intenção é usar os do WoW. ⚠️ É Blizzard, não é livre. Pra uma mesa presencial de 5 amigos, tudo bem — se um dia virar produto ou portfólio público, é o primeiro problema. Plano B livre: game-icons.net (CC-BY).
+
+### Cortado por consequência de design
+
+- **Vida dos colegas na tela do jogador** — mora na TV. Se alguém pedir, a resposta é olhar pra mesa. Toda informação pública que sai do celular empurra o olhar de volta pro grupo.
+- Como consequência, o hub tem 3 botões, não 4.
+
+### Depois
+
+- Sistema de troca de peças de armadura estilo WoW/Diablo (house rule própria) — mas modelar `equipado` como **mapa de slots** desde já, não como lista, senão vira refatoração
+
+---
+
+## [v1] Sessão 1
+
+*O PRD é disso aqui e só disso.*
+
+- Personagens da mesa (fichas carregadas na mão, sem importador)
+- Vida: botões de toque, sem digitar
+- Vida bônus: barra branca depois da barra de vida; dano consome ela primeiro
+- Moedas (um número só, sem denominação)
+- Tela de log do mestre: quem fez o quê e quando
+- Comandos do mestre (`/dano thorin 12`)
+- Trocar cena/background que todos veem
+- Modo combate + ordem de iniciativa
+- TV: cena, fila de iniciativa (só a ordem, sem marcar de quem é a vez), barras de vida, fonte grande
+- **Ficha em modo leitura**: magias e itens com descrição, sem botão de conjurar
 - Anotações pessoais
-- Ao entrar em combate: popup pra digitar o resultado DO DADO da iniciativa (não o total, o app soma)
+- Hub do jogador com placeholders de arte (silhueta com slots fica pra quando o sistema de armadura entrar)
 
-## Funcionalidades - Mestre
+Ficha só-leitura já resolve boa parte da confusão da mesa (ler o que a magia faz sem folhear livro) e custa quase nada de lógica.
 
-- Controle de tudo por comando (`/dano thorin 12`)
-- Alterar moedas/vida/itens de qualquer personagem via comando (registra como mestre no log)
-- Tela de log: quem fez o quê e quando
-- Trocar a cena/background que todos veem
-- Entrar em modo combate
-- Cálculo da iniciativa (monstros rolam automático, jogadores digitam o dado)
-- Ver quem tá concentrando em qual magia
+---
 
-## Funcionalidades - TV da mesa
+## [s2] Inventário
 
-- Cena atual
-- Ordem de iniciativa, com destaque em quem tá na vez
-- Barra de vida de todo mundo
-- Fileira de ícones de efeito embaixo da barra de vida (só leitura, ninguém levanta pra clicar)
-- Fonte grande (testar a 2m de distância)
-
-## Inventário (containers)
-
-- Não modelar "mochila" e "cinto" separado — é `Container { nome, capacidade, custoDeAcesso }`
-- Mochila: limite por **peso**, acesso custa **ação**
-- Cinto: limite por **slots** (3 no básico), acesso custa **ação bônus**
-- Equipado ("na mão"): sem limite de container, acesso **livre**
+- `Container { nome, capacidade, custoDeAcesso }` — não modelar "mochila" e "cinto" separado
+  - mochila: limite por **peso**, acesso custa **ação**
+  - cinto: limite por **slots** (3 no básico), acesso custa **ação bônus**
+  - equipado ("na mão"): sem limite, acesso **livre**
 - Container é item: tem peso, preço, pode ser comprado/trocado por um melhor
-- Container dentro de container: **proibido no v1** (vira recursão)
-- Servidor **informa** o custo de ação, não policia turno
-
-### Dois limites, naturezas diferentes
-
-- `peso(container)` → **BLOQUEIA** (é volume, não cabe não entra)
-- `peso(personagem)` = containers + equipado + moedas → **SOBRECARREGA** (Força × 15, deixa passar)
-- Contar o que não tá em container: armadura vestida, arma na mão, escudo (placa = 65 lb)
+- Container dentro de container: **proibido** (vira recursão)
+- Dois limites de naturezas diferentes:
+  - `peso(container)` → **BLOQUEIA** (é volume)
+  - `peso(personagem)` = containers + equipado + moedas → **SOBRECARREGA** (Força × 15, deixa passar)
+- Contar o que não está em container: armadura vestida, arma na mão, escudo (placa = 65 lb)
 - Moedas pesam: 50 moedas = 1 lb — é o que enche depois de limpar masmorra
-- Loja generosa: mochilas de 60-80 lb, pro limite do corpo virar gargalo do personagem fraco
-- `Sobrecarregado` é **derivado no reducer**, não é evento (senão dessincroniza)
-- Sobrecarga é regra opcional do DMG → house rule minha de qualquer jeito
-- Avisar a galera antes da sessão 1: nas regras de 2024 já existe 1 interação livre com objeto por turno, meu sistema é mais duro que o livro
-
-### Banco
-
-- `peso` mora no **catálogo** (espada longa = 3 lb, nunca muda)
-- O que tá na mochila é **instância**: item + qtd + container
-- Peso carregado é sempre **calculado**, nunca armazenado
+- Loja generosa (mochilas de 60-80 lb) pro limite do corpo virar gargalo do personagem fraco
+- `Sobrecarregado` é **derivado no reducer**, não é evento (é o único efeito automático)
+- Banco: `peso` no **catálogo**; o que está na mochila é **instância** (item + qtd + container); peso carregado sempre **calculado**
 - 50 flechas = 1 registro com `qtd: 50`
 
-## Magias
+## [s2] Magias
 
-- Botão pra ver as magias que sabe, ler descrição
-- Botão de conjurar → desconta o slot e aplica efeito se tiver
-- **Três listas, não uma**: conhecidas (grimório) / preparadas / slots. Confundir conhecidas com preparadas é metade da confusão da mesa
-- Botão de conjurar só nas preparadas
-- Slots: `slots[circulo] = { total, gastos }` — contabilidade pura, maior ganho pelo menor esforço
-- Ao conjurar, escolher **em qual círculo** (senão perde upcast)
-- Truque não gasta slot, ritual não gasta, bruxo tem pool separado (recarrega em descanso curto)
+- **Três listas, não uma**: conhecidas (grimório) / preparadas / slots
+- `slots[circulo] = { total, gastos }` — contabilidade pura, maior ganho pelo menor esforço
+- Botão de conjurar só nas preparadas; ao conjurar, escolher **em qual círculo** (senão perde upcast)
+- Truque não gasta, ritual não gasta, bruxo tem pool separado (recarrega em descanso curto)
 
-### Componentes
+## [s3] Efeitos, conjuração e mãos
 
-- Material **sem custo em PO** → abstraído pela bolsa de componentes ou foco. **Não existe no inventário**, app não checa nada (galho de raio, casca de ovo, etc.)
-- Material **com custo em PO** → item de verdade no inventário. Se a descrição diz consumido, some ao conjurar
-- Foco e bolsa **não** cobrem componente com custo
-- Foco/bolsa é item **equipado** — se tá na mochila, não serve
-- Símbolo sagrado (clérigo/paladino), foco arcano (mago/bruxo/feiticeiro), foco druídico — mesmo mecanismo
-- Magia sem componente material ainda exige mão livre (gesto somático)
-- Resultado prático: a maioria esmagadora das magias não puxa nada do inventário
+- Tipo único `Efeito`: condição do SRD, magia, item, e **improviso do mestre na hora**
+  - campo de texto livre é obrigatório (metade do que rola na mesa é inventado)
+  - duração é **texto**, não automação ("1 minuto", "concentração") — limpa na mão
+  - flag `concentracao: true` → tela do mestre mostra quem concentra em quê
+  - ícone no celular com descrição ao clicar; TV só mostra o ícone
+  - passa pelo filtro de audiência (maldição oculta é `mestre` + `privado:personagem`)
+  - ícone v1: borda verde/vermelha + letra ou emoji
+- Mãos: 2 slots. Arma de duas mãos ocupa dois, escudo ocupa um. **1 mão livre** pra maioria das magias.
+- Componentes:
+  - material **sem custo em PO** → abstraído por foco/bolsa, **não existe no inventário**, app não checa
+  - material **com custo em PO** → item real; se a descrição diz consumido, some ao conjurar
+  - foco/bolsa não cobrem componente com custo, e são item **equipado** (na mochila não servem)
+  - magia sem componente material ainda exige mão livre (gesto somático)
+  - resultado prático: a maioria esmagadora das magias não puxa nada do inventário
+- Conjurar desconta o slot e avisa se falta mão livre ou componente
 
-### Mãos
-
-- 2 slots. Arma de duas mãos ocupa os dois, escudo ocupa um
-- Precisa de **1 mão livre** pra maioria das magias (gesto + alcance do foco usam a mesma mão)
-- Vincula com container: pegar o escudo gasta ação → muda a mão → muda o que pode conjurar
-- "Inventário" = soma dos containers, não só a mochila. A pergunta é **onde está o item**, não se tem:
-  - equipado → conjura direto
-  - cinto → ação bônus pra sacar
-  - mochila → ação pra sacar
-- ⚠️ Pela regra, pegar componente é parte da conjuração e não custa ação. Meu sistema é mais duro — house rule proposital, faz o cinto valer pro conjurador. **Avisar a mesa.**
-
-### Princípio
-
-- **Avisar, não bloquear.** "Você não tem mão livre" em vermelho, botão continua clicável. Vai ter exceção de classe, item mágico, ou eu simplesmente vou querer deixar passar.
-
-## Buffs e debuffs
-
-- Tipo único `Efeito`: condição do SRD, magia, item, e **improviso meu na hora**
-- Campo de texto livre é obrigatório (metade do que rola na mesa é inventado)
-- Duração é **texto**, não automação ("1 minuto", "concentração") — limpo na mão
-- Flag `concentracao: true` → tela do mestre mostra quem tá concentrando em quê
-- Descrição mora no celular, TV só mostra o ícone
-- Passa pelo filtro de audiência — maldição oculta é `mestre` + `privado:personagem`
-- Ícone v1: borda verde/vermelha + letra ou emoji. Arte depois.
-
-## Implementação
-
-- Servidor no notebook, rede local, sem hospedagem
-- Node + TypeScript + Socket.IO + SQLite + React
-- Três telas: `/mesa` (TV), `/jogador` (celular), `/mestre` (notebook)
-- Comando → evento → broadcast → reducer
-- Evento gravado append-only (log sai de graça)
-- `reducer` roda no servidor e no cliente (mesmo arquivo em `shared/`)
-- Filtro de audiência: `publico` / `privado:personagem` / `mestre`
-- Reconexão: snapshot completo, depois só deltas
-- Identidade no handshake, não no comando
-- Dados do SRD 5.2.1 (2024) via Open5e v2 → seed local no SQLite
-- Wake Lock API pra tela do celular não apagar
-- Regra dura: nada no v1 pode ser ponto único de falha da sessão. Caiu, volta pro papel.
+---
 
 ## Depois
 
@@ -135,13 +188,21 @@ tags: [projeto, rpg, dnd]
 - Undo de evento
 - Replay da sessão
 - Mapa e tokens
-- Magias fora do SRD (por enquanto na mão)
-- Container dentro de container (bolsa de contenção)
+- Magias fora do SRD (por enquanto digitadas na mão)
 - Motor de turno / duração automática de efeitos
-- Controle de economia de ação (quem já usou bônus no turno)
+- Controle de economia de ação
 - Arte de verdade pros ícones de efeito
 
-## Descartado
+---
 
-- **Rolagem de dado dos jogadores no app** — o dado físico na mesa é o que mais importa num RPG. O app existe pra tirar burocracia do caminho, não pra substituir o momento de rolar. (Monstro do mestre rola automático: é burocracia atrás do biombo, não é o momento de ninguém.)
-- **Modo "entrar no personagem" na UI** — o comando já faz isso e registra como mestre no log. Entrar pelo link dele mascara quem agiu e conflita com identidade no handshake.
+## Em aberto
+
+*Aqui o grill deve gastar tempo.*
+
+- Modelo de `Personagem`: quais campos ficam no estado da mesa e quais vêm do catálogo
+- Formato exato do evento (campos comuns: id, tipo, autor, timestamp, audiência)
+- Como o mestre autentica (PIN? nada, já que é rede local?)
+- Fichas atuais dos jogadores: existem em algum formato digital ou é tudo papel?
+- Uma mesa só ou o servidor precisa suportar várias campanhas?
+- O que acontece com o log entre sessões (zera? acumula? marca sessão?)
+- Tamanho de fonte da TV — decidir no protótipo, olhando de 2m
