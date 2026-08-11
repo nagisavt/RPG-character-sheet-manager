@@ -1,2 +1,5 @@
 .obsidian/
 node_modules/
+
+# symlinks gerados por `npx skills` — recriaveis a partir de .agents/
+.claude/
