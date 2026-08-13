@@ -6,3 +6,6 @@ node_modules/
 
 # o Log da Mesa local, criado por `npm run dev`
 dados/
+
+# a senha do mestre. o exemplo (.env.exemplo) e que e versionado
+.env

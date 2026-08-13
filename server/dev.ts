@@ -10,6 +10,14 @@ import { iniciarServidor } from "./servidor.js";
  * fica em `dados/`, fora do versionamento, e sobrevive ao reinício: é ele que
  * reconstrói o estado.
  */
+// O `.env` é a variável de ambiente escrita uma vez, num arquivo que não é
+// versionado. Não existir é normal: quem exporta a senha na mão passa direto.
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // Sem `.env`. A conferência da senha logo abaixo é quem decide se dá para subir.
+}
+
 const PORTA = Number(process.env["PORTA"] ?? 3000);
 
 // A senha não tem default: um default é uma senha pública, e `/mestre` é a tela
@@ -17,8 +25,10 @@ const PORTA = Number(process.env["PORTA"] ?? 3000);
 const SENHA_MESTRE = process.env["SENHA_MESTRE"];
 if (SENHA_MESTRE === undefined || SENHA_MESTRE === "") {
   console.error("Falta SENHA_MESTRE: a senha do mestre vem do ambiente, não do código.");
-  console.error('  PowerShell:  $env:SENHA_MESTRE = "..."; npm run dev');
-  console.error('  bash:        SENHA_MESTRE="..." npm run dev');
+  console.error("  copie .env.exemplo para .env e escolha a senha lá dentro,");
+  console.error('  ou exporte na mão:  $env:SENHA_MESTRE = "..."; npm run dev');
+  // `tsx watch` segura o terminal depois desta saída: o processo morreu, mas a
+  // janela continua aberta esperando um arquivo mudar. Editar o `.env` sobe.
   process.exit(1);
 }
 
