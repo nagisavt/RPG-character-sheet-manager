@@ -15,23 +15,39 @@ export type Autor = { tipo: "mestre" } | { tipo: "jogador"; personagem: Personag
 export type Audiencia = "publico" | "mestre" | { privado: PersonagemId };
 
 /**
- * O corpo do Evento como o decisor o devolve — sem `id` e sem `timestamp`.
- * É o que mantém o decisor puro: sem relógio e sem contador.
+ * O que aconteceu, com os campos que só aquele Evento tem. Moedas, Cena e
+ * Combate entram nas issues seguintes, cada um como mais um caso daqui.
  */
-export type EventoNovo = {
-  tipo: TipoDeEvento;
-  autor: Autor;
-  audiencia: Audiencia[];
+export type Corpo = { tipo: "SessaoIniciada" } | { tipo: "SessaoFinalizada" } | VidaAlterada;
+
+/**
+ * A vida de um personagem mudou. Grava as duas coisas (ADR-0003):
+ *
+ * - `declarado` é a diferença que a mesa declarou — `-8` num dano, `+5` numa cura;
+ * - `vida` é onde o personagem ficou depois dela.
+ *
+ * O reducer lê `vida` e ignora `declarado`, e é por isso que nenhum Evento
+ * antigo muda de sentido quando a vida máxima sobe na Ficha. `declarado` fica
+ * para a tela de Log poder escrever `cura 8 (25 → 28)` e mostrar honestamente
+ * que cinco se perderam no teto.
+ */
+export type VidaAlterada = {
+  tipo: "VidaAlterada";
+  personagem: PersonagemId;
+  declarado: number;
+  vida: number;
 };
+
+/**
+ * O Evento como o decisor o devolve — sem `id` e sem `timestamp`. É o que
+ * mantém o decisor puro: sem relógio e sem contador.
+ */
+export type EventoNovo = Corpo & { autor: Autor; audiencia: Audiencia[] };
 
 /** O Evento já gravado no Log. `id` é sequencial do banco: o Log tem escritor único. */
 export type Evento = EventoNovo & { id: number; timestamp: string };
 
-/**
- * Os Eventos do v1 que a espinha atravessa. Vida, Moedas, Cena e Combate entram
- * nas issues seguintes, cada um com seus campos próprios.
- */
-export type TipoDeEvento = "SessaoIniciada" | "SessaoFinalizada";
+export type TipoDeEvento = Corpo["tipo"];
 
 /**
  * A Ficha é a folha de papel digitada à mão pelo mestre num arquivo versionado.

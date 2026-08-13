@@ -14,6 +14,23 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
       return { ...estado, sessaoAtiva: true };
     case "SessaoFinalizada":
       return { ...estado, sessaoAtiva: false };
+
+    case "VidaAlterada": {
+      const personagem = estado.personagens[evento.personagem];
+      // Um personagem que saiu das Fichas continua no Log: a campanha em que ele
+      // esteve aconteceu. Os Eventos dele passam batido, não quebram o replay.
+      if (personagem === undefined) return estado;
+
+      // **Atribui, não acumula** (ADR-0003). É o que faz o replay do Log dar no
+      // mesmo lugar depois de a vida máxima mudar na Ficha.
+      return {
+        ...estado,
+        personagens: {
+          ...estado.personagens,
+          [evento.personagem]: { ...personagem, vida: evento.vida },
+        },
+      };
+    }
   }
 };
 

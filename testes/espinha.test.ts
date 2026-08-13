@@ -41,6 +41,158 @@ it("a Sessão vai até o fim e os dois Eventos ficam no Log, carimbados em ordem
   }
 });
 
+describe("Vida", () => {
+  it("o dano declarado pelo mestre chega na TV, e o Evento grava a diferença e o resultado", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -8 });
+
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
+    expect(tv.eventos.at(-1)).toMatchObject({
+      tipo: "VidaAlterada",
+      personagem: "thorin",
+      declarado: -8,
+      vida: 20,
+    });
+  });
+
+  it("uma cura não passa da vida máxima, e o Evento guarda o declarado junto do limitado", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -3 });
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: 30 });
+
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(28);
+    // A cura de 30 aconteceu; 5 se perderam no teto, e o Log conta as duas coisas.
+    expect(tv.eventos.at(-1)).toMatchObject({ declarado: 30, vida: 28 });
+  });
+
+  it("o dano para em zero: ninguém fica com vida negativa", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -99 });
+
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(0);
+    expect(tv.eventos.at(-1)).toMatchObject({ declarado: -99, vida: 0 });
+  });
+
+  it("a vida de um personagem não mexe na do outro", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -8 });
+
+    expect(tv.estado.personagens["elara"]?.vida).toBe(22);
+  });
+
+  it("recusa um personagem que não está nas Fichas, sem gravar nada", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "gandalf",
+      diferenca: -8,
+    });
+
+    expect(resposta).toEqual({ aceito: false, motivo: "Personagem desconhecido: gandalf" });
+    expect(mestre.eventos).toEqual([]);
+  });
+
+  it("o jogador não altera vida, nem a própria: quem declara o que aconteceu é o mestre", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    const resposta = await celular.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -8,
+    });
+
+    expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'alterarVida'" });
+    expect(celular.estado.personagens["thorin"]?.vida).toBe(28);
+  });
+});
+
+describe("a linha que o mestre digita", () => {
+  it("'/dano thorin 8' derruba a vida do Thorin", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    const resposta = await mestre.digitar("/dano thorin 8");
+
+    expect(resposta).toEqual({ aceito: true });
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
+  });
+
+  it("'/cura thorin 5' sobe, e o sinal vem do verbo e não do número", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.digitar("/dano thorin 10");
+    await mestre.digitar("/cura thorin 5");
+
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(23);
+    expect(tv.eventos.map((evento) => "declarado" in evento && evento.declarado)).toEqual([-10, 5]);
+  });
+
+  it("'/dano thorin -8' é erro de digitação, não uma cura", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.digitar("/dano thorin -8");
+
+    expect(resposta.aceito).toBe(false);
+    expect(mestre.estado.personagens["thorin"]?.vida).toBe(28);
+    expect(mestre.eventos).toEqual([]);
+  });
+
+  it("'/iniciar' e '/finalizar' atravessam a Sessão inteira", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.digitar("/iniciar");
+    expect(tv.estado.sessaoAtiva).toBe(true);
+
+    await mestre.digitar("/finalizar");
+    expect(tv.estado.sessaoAtiva).toBe(false);
+  });
+
+  it("uma linha que não é comando não chega no servidor", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.digitar("/dano");
+
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Escreva '/dano <personagem> <quantidade>'",
+    });
+    expect(mestre.eventos).toEqual([]);
+  });
+});
+
 describe("identidade e autorização", () => {
   it("recusa um Comando de mestre vindo de um socket de jogador", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });

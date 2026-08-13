@@ -1,5 +1,4 @@
 import { createInterface } from "node:readline/promises";
-import type { Comando } from "../shared/comandos.js";
 import { criarMesa } from "./criar-mesa.js";
 import { fichasDeExemplo } from "./fichas-exemplo.js";
 
@@ -16,14 +15,17 @@ const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
 const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
 const tv = await mesa.conectar({ como: "mesa" });
 
-const COMANDOS: Record<string, Comando> = {
-  iniciar: { tipo: "iniciarSessao" },
-  finalizar: { tipo: "finalizarSessao" },
-};
-
 console.log(`Mesa no ar na porta ${mesa.porta}, com o mestre, o celular do Thorin e a TV ligados.`);
 console.log(`Log em ${mesa.caminhoDoLog}`);
-console.log(`Comandos: ${Object.keys(COMANDOS).join(", ")}, estado, log, reiniciar, sair`);
+// As linhas com `/` são Comandos da Mesa, digitados como o mestre digitaria na
+// tela dele. As palavras soltas são controles daqui, do playground.
+console.log("Comandos: /iniciar, /finalizar, /dano <personagem> <n>, /cura <personagem> <n>");
+console.log("Playground: estado, log, reiniciar, sair");
+
+const vidas = () =>
+  Object.values(tv.estado.personagens)
+    .map((personagem) => `${personagem.nome} ${personagem.vida}/${personagem.vidaMaxima}`)
+    .join(", ");
 
 /** Devolve `false` quando é hora de fechar a Mesa. */
 const responder = async (linha: string): Promise<boolean> => {
@@ -48,15 +50,11 @@ const responder = async (linha: string): Promise<boolean> => {
     return true;
   }
 
-  const comando = COMANDOS[linha];
-  if (comando === undefined) {
-    if (linha !== "") console.log(`Não conheço '${linha}'.`);
-    return true;
-  }
+  if (linha === "") return true;
 
-  const resposta = await mestre.enviar(comando);
+  const resposta = await mestre.digitar(linha);
   console.log(resposta.aceito ? "aceito" : `recusado: ${resposta.motivo}`);
-  console.log(`  a TV vê sessaoAtiva=${tv.estado.sessaoAtiva}`);
+  console.log(`  a TV vê sessaoAtiva=${tv.estado.sessaoAtiva} e ${vidas()}`);
   console.log(`  o celular do Thorin recebeu ${celular.eventos.length} Evento(s)`);
   return true;
 };

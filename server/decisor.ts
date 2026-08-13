@@ -26,5 +26,37 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
     case "finalizarSessao":
       if (!estado.sessaoAtiva) return { recusa: "Nenhuma Sessão em curso" };
       return { eventos: [{ tipo: "SessaoFinalizada", autor, audiencia: ["publico"] }] };
+
+    case "alterarVida": {
+      const personagem = estado.personagens[comando.personagem];
+      if (personagem === undefined) {
+        return { recusa: `Personagem desconhecido: ${comando.personagem}` };
+      }
+      // O Log é append-only: um `NaN` gravado aqui não tem como ser corrigido
+      // depois, e passaria a envenenar todo replay da campanha.
+      if (!Number.isInteger(comando.diferenca)) {
+        return { recusa: "A diferença de vida precisa ser um número inteiro" };
+      }
+
+      // O teto não recusa o Comando, limita o resultado: uma cura de 8 em quem
+      // está a 3 do máximo aconteceu, e o Evento registra as duas coisas.
+      const vida = entre(0, personagem.vida + comando.diferenca, personagem.vidaMaxima);
+      return {
+        eventos: [
+          {
+            tipo: "VidaAlterada",
+            personagem: comando.personagem,
+            declarado: comando.diferenca,
+            vida,
+            autor,
+            // A vida é pública: ela está na TV, em barra, para a mesa inteira ver.
+            audiencia: ["publico"],
+          },
+        ],
+      };
+    }
   }
 };
+
+const entre = (minimo: number, valor: number, maximo: number): number =>
+  Math.min(Math.max(valor, minimo), maximo);

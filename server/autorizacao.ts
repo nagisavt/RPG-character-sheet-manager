@@ -15,6 +15,9 @@ import type { Identidade } from "../shared/identidade.js";
 const QUEM_PODE: Record<TipoDeComando, Identidade["como"][]> = {
   iniciarSessao: ["mestre"],
   finalizarSessao: ["mestre"],
+  // Vida é do mestre, inclusive a do próprio jogador: quem declara o que
+  // aconteceu na mesa é ele.
+  alterarVida: ["mestre"],
 };
 
 export const autorizar = (identidade: Identidade, tipo: TipoDeComando): Resposta => {

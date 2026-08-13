@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { io, type Socket } from "socket.io-client";
 import type { Comando, Resposta } from "../shared/comandos.js";
 import type { Credencial, Handshake, Snapshot, Transmissao } from "../shared/identidade.js";
+import { lerLinha } from "../shared/linha-de-comando.js";
 import { reducer } from "../shared/reducer.js";
 import { MESA_ID, type Estado, type Evento, type Ficha } from "../shared/tipos.js";
 import { iniciarServidor, type Servidor } from "../server/servidor.js";
@@ -36,6 +37,8 @@ export type Cliente = {
   /** Só os Eventos que este cliente teve direito de receber. */
   readonly eventos: readonly Evento[];
   enviar: (comando: Comando) => Promise<Resposta>;
+  /** A linha que o mestre digita, pelo mesmo caminho da tela: `mestre.digitar("/dano thorin 8")`. */
+  digitar: (linha: string) => Promise<Resposta>;
   /** O celular que dormiu e acordou: cai e volta sozinho, com o servidor no ar. */
   reconectar: () => Promise<void>;
   desconectar: () => void;
@@ -165,6 +168,12 @@ const conectarCliente = async (
       socket.once("disconnect", acordar);
     });
 
+  const enviar = async (comando: Comando): Promise<Resposta> => {
+    const resposta = await socket.emitWithAck("comando", comando);
+    if (resposta.aceito) await sincronizar(ate);
+    return resposta;
+  };
+
   return {
     get estado() {
       return estado;
@@ -172,10 +181,13 @@ const conectarCliente = async (
     get eventos() {
       return eventos;
     },
-    enviar: async (comando) => {
-      const resposta = await socket.emitWithAck("comando", comando);
-      if (resposta.aceito) await sincronizar(ate);
-      return resposta;
+    enviar,
+    digitar: async (linha) => {
+      const leitura = lerLinha(linha);
+      // Uma linha que não é comando é uma recusa como outra qualquer para quem
+      // digitou: nada sai daqui, e o motivo aparece no mesmo lugar da tela.
+      if ("erro" in leitura) return { aceito: false, motivo: leitura.erro };
+      return enviar(leitura.comando);
     },
     reconectar: async () => {
       const voltou = new Promise<void>((pronto) => socket.once("snapshot", () => pronto()));
