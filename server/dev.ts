@@ -1,4 +1,6 @@
+import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { createServer as criarVite } from "vite";
 import { fichasDaMesa } from "../fichas/mesa.js";
 import { iniciarServidor } from "./servidor.js";
@@ -32,6 +34,19 @@ if (SENHA_MESTRE === undefined || SENHA_MESTRE === "") {
   process.exit(1);
 }
 
+/**
+ * O fallback de SPA responde o `index.html` para o que ele não conhece — e para
+ * um `<img>`, HTML é um arquivo quebrado com cara de sucesso. A Cena que ainda
+ * não tem desenho tem que dar 404, que é o que faz a TV mostrar o placeholder
+ * pelo motivo certo. Vale para toda a arte que vai entrar em `assets/`.
+ */
+const IMAGEM = /\.(png|jpe?g|webp|svg|gif)$/i;
+
+const imagemQueNaoExiste = (url: string | undefined): boolean => {
+  const caminho = (url ?? "").split("?")[0] ?? "";
+  return IMAGEM.test(caminho) && !existsSync(join("assets", caminho));
+};
+
 await mkdir("dados", { recursive: true });
 
 // As telas no mesmo processo do Log: um `npm run dev` sobe a Mesa inteira.
@@ -45,11 +60,17 @@ const servidor = await iniciarServidor({
   caminhoDoLog: "dados/mesa.db",
   senhaDoMestre: SENHA_MESTRE,
   porta: PORTA,
-  paginas: (requisicao, resposta) =>
+  paginas: (requisicao, resposta) => {
+    if (imagemQueNaoExiste(requisicao.url)) {
+      resposta.statusCode = 404;
+      resposta.end("Este arquivo não está na pasta");
+      return;
+    }
     vite.middlewares(requisicao, resposta, () => {
       resposta.statusCode = 404;
       resposta.end("Esta tela não existe");
-    }),
+    });
+  },
 });
 
 console.log(`Mesa no ar em http://localhost:${servidor.porta}/mestre`);

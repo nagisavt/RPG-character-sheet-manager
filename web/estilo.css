@@ -134,6 +134,80 @@ form input {
   font-family: ui-monospace, monospace;
 }
 
+/*
+ * A TV. **O número a ajustar é o `font-size` do `.tv`** — todo o resto é medido
+ * em `em` a partir dele, então a tela inteira cresce junto. A distância de
+ * leitura é fixa (dois metros, sempre), então o ajuste é olhando de lá, uma vez,
+ * e não chutando aqui.
+ */
+.tv {
+  font-size: 2.2vw;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+.cena {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
+.cena img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* O placeholder combinado: retângulo preto, rótulo em cinza claro. */
+.cena .rotulo {
+  color: #9aa0aa;
+  font-size: 1.5em;
+  letter-spacing: 0.05em;
+}
+
+.vidas {
+  list-style: none;
+  margin: 0;
+  padding: 0.75em 1em 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  background: rgb(0 0 0 / 0.85);
+}
+
+.vidas .nome {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1em;
+  font-weight: 600;
+  margin-bottom: 0.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+.vidas .barra {
+  height: 0.7em;
+  background: #23262c;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.vidas .barra div {
+  height: 100%;
+  background: var(--vida);
+  transition: width 150ms ease-out;
+}
+
+.avisando {
+  margin: auto;
+  color: var(--apagado);
+  font-size: 1.2em;
+}
+
 .ajuda {
   /* No notebook fica centralizado; no celular ocupa a tela. Mesma interface, um
      breakpoint — a tela do jogador vai usar a mesma regra. */
