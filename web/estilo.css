@@ -134,6 +134,69 @@ form input {
   font-family: ui-monospace, monospace;
 }
 
+.ajuda {
+  /* No notebook fica centralizado; no celular ocupa a tela. Mesma interface, um
+     breakpoint — a tela do jogador vai usar a mesma regra. */
+  width: min(34rem, 100vw - 2rem);
+  margin: auto;
+  background: var(--papel);
+  color: var(--letra);
+  border: 1px solid var(--borda);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+}
+
+.ajuda::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.ajuda header {
+  margin-bottom: 1rem;
+}
+
+.ajuda h2 {
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+/* O `<form method="dialog">` do botão de fechar não é a linha de comando. */
+.ajuda form {
+  margin: 0;
+}
+
+.ajuda dl {
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.ajuda dt code {
+  font-size: 0.9375rem;
+}
+
+.ajuda dd {
+  margin: 0.25rem 0 0;
+  color: var(--apagado);
+  font-size: 0.875rem;
+}
+
+.exemplo {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.ajuda p {
+  margin: 1.25rem 0 0;
+  font-size: 0.8125rem;
+}
+
+code {
+  font-family: ui-monospace, monospace;
+  background: #000;
+  border-radius: 0.25rem;
+  padding: 0.0625rem 0.375rem;
+}
+
 .resposta {
   margin-top: 0.75rem;
   font-size: 0.875rem;

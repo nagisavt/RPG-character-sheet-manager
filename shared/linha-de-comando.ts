@@ -12,7 +12,41 @@ import type { Comando } from "./comandos.js";
  */
 export type Leitura = { comando: Comando } | { erro: string };
 
-const AJUDA = "/iniciar, /finalizar, /dano <personagem> <quantidade>, /cura <personagem> <quantidade>";
+/**
+ * O que o mestre pode digitar, descrito uma vez só. A tela lê daqui para montar
+ * a lista de comandos, e as mensagens de erro daqui saem também: um Comando novo
+ * aparece nos dois lugares por ter sido acrescentado num.
+ */
+export type Verbete = {
+  uso: string;
+  descricao: string;
+  exemplo: string;
+};
+
+export const VERBETES: readonly Verbete[] = [
+  {
+    uso: "/iniciar",
+    descricao: "Abre a Sessão. É o primeiro Comando da noite.",
+    exemplo: "/iniciar",
+  },
+  {
+    uso: "/finalizar",
+    descricao: "Fecha a Sessão. O Log continua: é a noite que acabou, não a campanha.",
+    exemplo: "/finalizar",
+  },
+  {
+    uso: "/dano <personagem> <quantidade>",
+    descricao: "Tira vida. Para em zero, e o Log guarda o que foi declarado.",
+    exemplo: "/dano thorin 8",
+  },
+  {
+    uso: "/cura <personagem> <quantidade>",
+    descricao: "Devolve vida, até o máximo da Ficha. O que passar do teto fica registrado.",
+    exemplo: "/cura thorin 5",
+  },
+];
+
+const AJUDA = VERBETES.map((verbete) => verbete.uso).join(", ");
 
 export const lerLinha = (linha: string): Leitura => {
   const [verbo = "", ...argumentos] = linha.trim().split(/\s+/);

@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type Ref } from "react";
 import type { Resposta } from "../../shared/comandos.js";
+import { VERBETES } from "../../shared/linha-de-comando.js";
 import type { Personagem } from "../../shared/tipos.js";
 import { usarMesa } from "../usar-mesa.js";
 
@@ -145,25 +146,70 @@ const Vida = ({
 
 const LinhaDeComando = ({ digitar }: { digitar: (linha: string) => void }) => {
   const [linha, setLinha] = useState("");
+  const ajuda = useRef<HTMLDialogElement>(null);
 
   return (
-    <form
-      className="linha"
-      onSubmit={(evento: FormEvent) => {
-        evento.preventDefault();
-        digitar(linha);
-        setLinha("");
-      }}
-    >
-      <input
-        value={linha}
-        onChange={(evento) => setLinha(evento.target.value)}
-        placeholder="/dano thorin 8"
-        aria-label="Comando"
-        autoComplete="off"
-        spellCheck={false}
-      />
-      <button type="submit">enviar</button>
-    </form>
+    <>
+      <form
+        className="linha"
+        onSubmit={(evento: FormEvent) => {
+          evento.preventDefault();
+          digitar(linha);
+          setLinha("");
+        }}
+      >
+        <input
+          value={linha}
+          onChange={(evento) => setLinha(evento.target.value)}
+          placeholder="/dano thorin 8"
+          aria-label="Comando"
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <button type="submit">enviar</button>
+        <button type="button" onClick={() => ajuda.current?.showModal()} aria-label="Comandos">
+          ?
+        </button>
+      </form>
+
+      <Ajuda ref={ajuda} />
+    </>
   );
 };
+
+/**
+ * A lista de Comandos, saída do `shared/linha-de-comando.ts`. É `<dialog>` do
+ * próprio navegador: Esc fecha, o foco fica preso dentro e o fundo escurece sem
+ * uma linha de JavaScript para isso.
+ */
+const Ajuda = ({ ref }: { ref: Ref<HTMLDialogElement> }) => (
+  <dialog className="ajuda" ref={ref}>
+    <header>
+      <h2>Comandos</h2>
+      <form method="dialog">
+        <button aria-label="Fechar">×</button>
+      </form>
+    </header>
+
+    <dl>
+      {VERBETES.map((verbete) => (
+        <div key={verbete.uso}>
+          <dt>
+            <code>{verbete.uso}</code>
+          </dt>
+          <dd>
+            {verbete.descricao}
+            <span className="exemplo">
+              <code>{verbete.exemplo}</code>
+            </span>
+          </dd>
+        </div>
+      ))}
+    </dl>
+
+    <p className="apagado">
+      A quantidade vai sem sinal: quem diz se a vida sobe ou desce é o verbo. Os botões de cada
+      personagem fazem o mesmo que <code>/dano</code> e <code>/cura</code>.
+    </p>
+  </dialog>
+);
