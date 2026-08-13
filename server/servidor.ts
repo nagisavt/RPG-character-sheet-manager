@@ -5,6 +5,7 @@ import {
   type ServerResponse,
 } from "node:http";
 import { Server as ServidorSocket, type Socket } from "socket.io";
+import type { Consulta, Entrada, TipoDoCatalogo } from "../shared/catalogo.js";
 import type { Comando, Resposta } from "../shared/comandos.js";
 import { estadoInicial } from "../shared/estado.js";
 import {
@@ -18,6 +19,7 @@ import { reconstruir, reducer } from "../shared/reducer.js";
 import { MESA_ID, type Estado, type Ficha } from "../shared/tipos.js";
 import { podeVer } from "./audiencia.js";
 import { autorizar } from "./autorizacao.js";
+import { abrirCatalogo } from "./catalogo.js";
 import { decisor } from "./decisor.js";
 import { abrirStore, type Store } from "./store.js";
 
@@ -41,6 +43,8 @@ export type Servidor = {
   /** O estado da Mesa, em memória. O SQLite guarda só o Log. */
   readonly estado: Estado;
   log: () => ReturnType<Store["ler"]>;
+  /** Quantas entradas o Catálogo tem, por tipo. Zero quer dizer que falta semear. */
+  catalogo: () => Record<TipoDoCatalogo, number>;
   encerrar: () => Promise<void>;
 };
 
@@ -48,6 +52,7 @@ type Sessao = { identidade: Identidade };
 
 export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servidor> => {
   const store = abrirStore({ caminho: opcoes.caminhoDoLog });
+  const catalogo = abrirCatalogo(opcoes.caminhoDoLog);
 
   // Na subida, o estado é o Log dobrado sobre as Fichas. Reiniciar o servidor
   // no meio da Sessão custa segundos e não perde nada.
@@ -59,7 +64,12 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
   // guarda quem já estava ali e só repassa o que não for dele. Registrar depois
   // faria as duas coisas responderem à mesma requisição.
   const http = opcoes.paginas === undefined ? createServer() : createServer(opcoes.paginas);
-  const io = new ServidorSocket<{ comando: ComandoDoCliente }, EventosDoServidor, never, Sessao>(
+  const io = new ServidorSocket<
+    { comando: ComandoDoCliente; consultar: ConsultaDoCliente },
+    EventosDoServidor,
+    never,
+    Sessao
+  >(
     http,
     { serveClient: false },
   );
@@ -76,6 +86,11 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
   io.on("connection", (socket) => {
     socket.emit("snapshot", { estado, ate });
     socket.on("comando", (comando, responder) => responder(processar(socket, comando)));
+    // Consultar o Catálogo não é Comando: não muda nada, não vira Evento e não
+    // passa por autorização — é a mesma regra do SRD para qualquer tela.
+    socket.on("consultar", (consulta, responder) =>
+      responder(ehConsulta(consulta) ? catalogo.consultar(consulta) : null),
+    );
   });
 
   const processar = (socket: Socket<never, EventosDoServidor, never, Sessao>, comando: Comando) => {
@@ -112,9 +127,11 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
       return estado;
     },
     log: () => store.ler(),
+    catalogo: () => catalogo.contar(),
     encerrar: async () => {
       await io.close();
       store.fechar();
+      catalogo.fechar();
     },
   };
 };
@@ -159,7 +176,22 @@ const portaDe = (http: ServidorHttp): number => {
   return endereco.port;
 };
 
+/**
+ * A consulta chega da rede, então nada nela é confiável antes de conferido —
+ * mesma régua do handshake. Um `tipo` que não existe não é erro de ninguém: o
+ * Catálogo simplesmente não tem aquilo.
+ */
+const TIPOS: readonly string[] = ["magia", "item", "monstro"];
+
+const ehConsulta = (consulta: unknown): consulta is Consulta => {
+  if (typeof consulta !== "object" || consulta === null) return false;
+  const { tipo, chave } = consulta as Record<string, unknown>;
+  return typeof chave === "string" && typeof tipo === "string" && TIPOS.includes(tipo);
+};
+
 type ComandoDoCliente = (comando: Comando, responder: (resposta: Resposta) => void) => void;
+
+type ConsultaDoCliente = (consulta: Consulta, responder: (entrada: Entrada | null) => void) => void;
 
 type EventosDoServidor = {
   snapshot: (snapshot: Snapshot) => void;

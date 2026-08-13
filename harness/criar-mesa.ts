@@ -1,12 +1,15 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { io, type Socket } from "socket.io-client";
+import type { Consulta, Entrada } from "../shared/catalogo.js";
 import type { Comando, Resposta } from "../shared/comandos.js";
 import type { Credencial, Handshake, Snapshot, Transmissao } from "../shared/identidade.js";
 import { lerLinha } from "../shared/linha-de-comando.js";
 import { reducer } from "../shared/reducer.js";
 import { MESA_ID, type Estado, type Evento, type Ficha } from "../shared/tipos.js";
+import { semear } from "../server/catalogo.js";
 import { iniciarServidor, type Servidor } from "../server/servidor.js";
 
 /**
@@ -46,6 +49,8 @@ export type Cliente = {
   enviar: (comando: Comando) => Promise<Resposta>;
   /** A linha que o mestre digita, pelo mesmo caminho da tela: `mestre.digitar("/dano thorin 8")`. */
   digitar: (linha: string) => Promise<Resposta>;
+  /** O Catálogo, pelo mesmo socket. Não muda nada: nenhum Evento sai daqui. */
+  consultar: (consulta: Consulta) => Promise<Entrada | null>;
   /** O celular que dormiu e acordou: cai e volta sozinho, com o servidor no ar. */
   reconectar: () => Promise<void>;
   desconectar: () => void;
@@ -56,12 +61,23 @@ export type OpcoesDaMesa = {
   senhaDoMestre?: string;
   /** Um arquivo temporário é criado quando não vem caminho. */
   caminhoDoLog?: string;
+  /**
+   * O Catálogo desta Mesa. Semeado aqui, antes de o servidor subir, como o
+   * `catalogo:seed` faz antes da Sessão — o servidor nunca escreve nele.
+   */
+  catalogo?: readonly Entrada[];
 };
 
 export const criarMesa = async (opcoes: OpcoesDaMesa): Promise<Mesa> => {
   const senhaDoMestre = opcoes.senhaDoMestre ?? "1234";
   const pasta = opcoes.caminhoDoLog === undefined ? await mkdtemp(join(tmpdir(), "mesa-")) : null;
   const caminhoDoLog = opcoes.caminhoDoLog ?? join(pasta!, "mesa.db");
+
+  if (opcoes.catalogo !== undefined) {
+    const banco = new DatabaseSync(caminhoDoLog);
+    semear(banco, opcoes.catalogo);
+    banco.close();
+  }
 
   let fichas = opcoes.fichas;
   let servidor = await iniciarServidor({ fichas, caminhoDoLog, senhaDoMestre });
@@ -186,6 +202,7 @@ const conectarCliente = async (
       return eventos;
     },
     enviar,
+    consultar: (consulta) => socket.emitWithAck("consultar", consulta),
     digitar: async (linha) => {
       const leitura = lerLinha(linha);
       // Uma linha que não é comando é uma recusa como outra qualquer para quem

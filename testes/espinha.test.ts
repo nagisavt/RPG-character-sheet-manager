@@ -127,6 +127,59 @@ describe("Vida", () => {
   });
 });
 
+describe("Catálogo", () => {
+  const misselMagico = {
+    tipo: "magia",
+    chave: "srd-2024_magic-missile",
+    nome: "Míssil Mágico",
+    descricao: "Três dardos de energia, cada um com 1d4+1 de dano de força.",
+    detalhes: { nivel: 1, escola: "Evocação" },
+  } as const;
+
+  it("qualquer tela consulta uma magia por identificador, com a descrição inteira", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: [misselMagico] });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    expect(await celular.consultar({ tipo: "magia", chave: "srd-2024_magic-missile" })).toEqual(
+      misselMagico,
+    );
+  });
+
+  it("o que não está no Catálogo volta nulo, sem derrubar a conexão", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: [misselMagico] });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    expect(await celular.consultar({ tipo: "magia", chave: "bola-de-fogo" })).toBeNull();
+    // Mesma chave, tipo errado: `tipo` faz parte da identidade da entrada.
+    expect(await celular.consultar({ tipo: "item", chave: "srd-2024_magic-missile" })).toBeNull();
+  });
+
+  it("consultar o Catálogo não vira Evento: ele não entra no Log", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: [misselMagico] });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    await mestre.digitar("/iniciar");
+
+    await mestre.consultar({ tipo: "magia", chave: "srd-2024_magic-missile" });
+
+    // Só a Sessão que começou. A regra do SRD não é fato da Mesa.
+    expect(mestre.eventos.map((evento) => evento.tipo)).toEqual(["SessaoIniciada"]);
+  });
+
+  it("o Catálogo sobrevive ao reinício sem ser semeado de novo", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: [misselMagico] });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    await mesa.reiniciar();
+
+    expect(await celular.consultar({ tipo: "magia", chave: "srd-2024_magic-missile" })).toEqual(
+      misselMagico,
+    );
+  });
+});
+
 describe("Cena", () => {
   it("o mestre troca a Cena e a TV muda", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
