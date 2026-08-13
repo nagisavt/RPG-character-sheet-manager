@@ -95,7 +95,12 @@ describe("o Log", () => {
     // A Sessão continua em curso: o estado não estava no processo que caiu.
     expect(tv.estado.sessaoAtiva).toBe(true);
     // E as Fichas voltaram como posição inicial, sem terem virado Evento.
-    expect(tv.estado.personagens["thorin"]).toEqual({ id: "thorin", nome: "Thorin" });
+    expect(tv.estado.personagens["thorin"]).toEqual({
+      id: "thorin",
+      nome: "Thorin",
+      vida: 28,
+      vidaMaxima: 28,
+    });
 
     // E a Mesa continua de onde parou: o Log seguiu, não recomeçou.
     await mestre.enviar({ tipo: "finalizarSessao" });

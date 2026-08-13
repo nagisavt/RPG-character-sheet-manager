@@ -1,13 +1,13 @@
 import { mkdir } from "node:fs/promises";
-import { fichasDeExemplo } from "../harness/fichas-exemplo.js";
+import { fichasDaMesa } from "../fichas/mesa.js";
 import { iniciarServidor } from "./servidor.js";
 
 /**
  * `npm run dev`: o processo Node com o SQLite, esperando conexões.
  *
- * As Fichas ainda são as de exemplo — o arquivo versionado de Fichas de verdade
- * é a issue #3. O banco fica em `dados/`, fora do versionamento, e sobrevive ao
- * reinício: é ele que reconstrói o estado.
+ * As Fichas vêm de `fichas/mesa.ts`, o arquivo que o mestre edita à mão. O banco
+ * fica em `dados/`, fora do versionamento, e sobrevive ao reinício: é ele que
+ * reconstrói o estado.
  */
 const PORTA = Number(process.env["PORTA"] ?? 3000);
 const SENHA_MESTRE = process.env["SENHA_MESTRE"] ?? "1234";
@@ -15,7 +15,7 @@ const SENHA_MESTRE = process.env["SENHA_MESTRE"] ?? "1234";
 await mkdir("dados", { recursive: true });
 
 const servidor = await iniciarServidor({
-  fichas: fichasDeExemplo,
+  fichas: fichasDaMesa,
   caminhoDoLog: "dados/mesa.db",
   senhaDoMestre: SENHA_MESTRE,
   porta: PORTA,

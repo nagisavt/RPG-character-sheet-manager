@@ -40,6 +40,8 @@ export type TipoDeEvento = "SessaoIniciada" | "SessaoFinalizada";
 export type Ficha = {
   id: PersonagemId;
   nome: string;
+  /** Muda entre sessões, ao subir de nível: por isso mora aqui e não no Log (ADR-0002). */
+  vidaMaxima: number;
 };
 
 /** O estado da Mesa: `eventos.reduce(reducer, estadoInicial(fichas))`. Vive em memória. */
@@ -48,8 +50,12 @@ export type Estado = {
   personagens: Record<PersonagemId, Personagem>;
 };
 
-/** Vida, Vida bônus e Moedas entram aqui nas issues que as trazem. */
+/** Vida bônus e Moedas entram aqui nas issues que as trazem. */
 export type Personagem = {
   id: PersonagemId;
   nome: string;
+  /** O que o Log diz. Começa cheia e só se move por `VidaAlterada`. */
+  vida: number;
+  /** Cópia do que a Ficha dizia na subida. Nenhum Evento depende dela para ser lido (ADR-0003). */
+  vidaMaxima: number;
 };
