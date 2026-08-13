@@ -15,6 +15,9 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
     case "SessaoFinalizada":
       return { ...estado, sessaoAtiva: false };
 
+    case "CenaTrocada":
+      return { ...estado, cena: evento.cena };
+
     case "VidaAlterada": {
       const personagem = estado.personagens[evento.personagem];
       // Um personagem que saiu das Fichas continua no Log: a campanha em que ele

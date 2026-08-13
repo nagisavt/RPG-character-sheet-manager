@@ -27,6 +27,20 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
       if (!estado.sessaoAtiva) return { recusa: "Nenhuma Sessão em curso" };
       return { eventos: [{ tipo: "SessaoFinalizada", autor, audiencia: ["publico"] }] };
 
+    case "trocarCena": {
+      // O nome vira caminho de arquivo e URL. Um `../` daqui sairia de
+      // `assets/cenas/` e ficaria gravado para sempre num Log que não se apaga.
+      if (!/^[a-z0-9-]+$/.test(comando.cena)) {
+        return { recusa: `'${comando.cena}' não é nome de Cena: só minúsculas, números e hífen` };
+      }
+      if (estado.cena === comando.cena) {
+        return { recusa: `A Cena '${comando.cena}' já está no ar` };
+      }
+      return {
+        eventos: [{ tipo: "CenaTrocada", cena: comando.cena, autor, audiencia: ["publico"] }],
+      };
+    }
+
     case "alterarVida": {
       const personagem = estado.personagens[comando.personagem];
       if (personagem === undefined) {

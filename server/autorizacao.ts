@@ -18,6 +18,7 @@ const QUEM_PODE: Record<TipoDeComando, Identidade["como"][]> = {
   // Vida é do mestre, inclusive a do próprio jogador: quem declara o que
   // aconteceu na mesa é ele.
   alterarVida: ["mestre"],
+  trocarCena: ["mestre"],
 };
 
 export const autorizar = (identidade: Identidade, tipo: TipoDeComando): Resposta => {

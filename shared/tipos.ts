@@ -18,7 +18,20 @@ export type Audiencia = "publico" | "mestre" | { privado: PersonagemId };
  * O que aconteceu, com os campos que só aquele Evento tem. Moedas, Cena e
  * Combate entram nas issues seguintes, cada um como mais um caso daqui.
  */
-export type Corpo = { tipo: "SessaoIniciada" } | { tipo: "SessaoFinalizada" } | VidaAlterada;
+export type Corpo =
+  | { tipo: "SessaoIniciada" }
+  | { tipo: "SessaoFinalizada" }
+  | VidaAlterada
+  | CenaTrocada;
+
+/**
+ * O grupo mudou de lugar. Grava o **nome do arquivo** em `assets/cenas/`, sem
+ * extensão e sem caminho: `taverna-do-javali` é `assets/cenas/taverna-do-javali.png`.
+ *
+ * O que o Evento não diz é se aquele arquivo tem desenho ou é placeholder. O
+ * código sempre pede o arquivo; o que muda com o tempo é o que tem dentro dele.
+ */
+export type CenaTrocada = { tipo: "CenaTrocada"; cena: string };
 
 /**
  * A vida de um personagem mudou. Grava as duas coisas (ADR-0003):
@@ -64,6 +77,8 @@ export type Ficha = {
 export type Estado = {
   sessaoAtiva: boolean;
   personagens: Record<PersonagemId, Personagem>;
+  /** A Cena no ar, ou `null` antes de o mestre escolher a primeira da noite. */
+  cena: string | null;
 };
 
 /** Vida bônus e Moedas entram aqui nas issues que as trazem. */

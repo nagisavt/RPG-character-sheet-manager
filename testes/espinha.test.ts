@@ -127,6 +127,76 @@ describe("Vida", () => {
   });
 });
 
+describe("Cena", () => {
+  it("o mestre troca a Cena e a TV muda", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    // Antes da primeira escolha da noite não há Cena nenhuma no ar.
+    expect(tv.estado.cena).toBeNull();
+
+    await mestre.digitar("/cena taverna-do-javali");
+
+    expect(tv.estado.cena).toBe("taverna-do-javali");
+    // O Evento grava o nome do arquivo, e nada mais: se aquele arquivo tem
+    // desenho ou é placeholder não é assunto do Log.
+    expect(tv.eventos.at(-1)).toMatchObject({
+      tipo: "CenaTrocada",
+      cena: "taverna-do-javali",
+    });
+  });
+
+  it("a Cena sobrevive ao reinício, porque ela está no Log", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+    await mestre.digitar("/cena estrada-para-o-norte");
+
+    await mesa.reiniciar();
+
+    expect(tv.estado.cena).toBe("estrada-para-o-norte");
+  });
+
+  it("recusa um nome que sairia de assets/cenas/", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.enviar({ tipo: "trocarCena", cena: "../../.env" });
+
+    expect(resposta.aceito).toBe(false);
+    expect(mestre.eventos).toEqual([]);
+  });
+
+  it("recusa trocar para a Cena que já está no ar, sem sujar o Log", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    await mestre.digitar("/cena taverna-do-javali");
+
+    const resposta = await mestre.digitar("/cena taverna-do-javali");
+
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "A Cena 'taverna-do-javali' já está no ar",
+    });
+    expect(mestre.eventos).toHaveLength(1);
+  });
+
+  it("o jogador não troca a Cena: a TV é do mestre", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    const resposta = await celular.enviar({ tipo: "trocarCena", cena: "taverna-do-javali" });
+
+    expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'trocarCena'" });
+  });
+});
+
 describe("a linha que o mestre digita", () => {
   it("'/dano thorin 8' derruba a vida do Thorin", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });

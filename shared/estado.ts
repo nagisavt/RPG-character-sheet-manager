@@ -7,6 +7,7 @@ import type { Estado, Ficha } from "./tipos.js";
 export const estadoInicial = (fichas: readonly Ficha[]): Estado => ({
   sessaoAtiva: false,
   personagens: Object.fromEntries(fichas.map((ficha) => [ficha.id, personagemDe(ficha)])),
+  cena: null,
 });
 
 /**

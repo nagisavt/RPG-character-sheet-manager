@@ -35,6 +35,11 @@ export const VERBETES: readonly Verbete[] = [
     exemplo: "/finalizar",
   },
   {
+    uso: "/cena <nome>",
+    descricao: "Troca o fundo da TV. O nome é o do arquivo em assets/cenas/, sem .png.",
+    exemplo: "/cena taverna-do-javali",
+  },
+  {
     uso: "/dano <personagem> <quantidade>",
     descricao: "Tira vida. Para em zero, e o Log guarda o que foi declarado.",
     exemplo: "/dano thorin 8",
@@ -60,6 +65,12 @@ export const lerLinha = (linha: string): Leitura => {
 
     case "/finalizar":
       return { comando: { tipo: "finalizarSessao" } };
+
+    case "/cena": {
+      const [nome, ...sobra] = argumentos;
+      if (nome === undefined || sobra.length > 0) return { erro: "Escreva '/cena <nome>'" };
+      return { comando: { tipo: "trocarCena", cena: nome } };
+    }
 
     case "/dano":
     case "/cura":
