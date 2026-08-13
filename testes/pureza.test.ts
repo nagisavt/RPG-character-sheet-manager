@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -22,6 +22,34 @@ const IMPUREZAS = [
   { nome: "relógio", padrao: /\bDate\b|performance\.now|hrtime/ },
   { nome: "gerador aleatório", padrao: /Math\.random|randomUUID/ },
 ] as const;
+
+/**
+ * "Durante a Sessão nenhuma chamada externa acontece." O Catálogo é semeado
+ * antes da noite começar, e o seed é o único arquivo do projeto autorizado a
+ * falar com a internet.
+ *
+ * A regra vale porque o wi-fi da casa caindo no meio da sessão não pode tirar a
+ * descrição de uma magia da tela — e uma regra dessas só continua valendo se
+ * ficar vermelha quando alguém a quebrar.
+ */
+describe("nada de rede durante a Sessão", () => {
+  const SEED = "server/catalogo-seed.ts";
+
+  it(`só o ${SEED} fala com a internet`, async () => {
+    const fontes = [...(await listar("server")), ...(await listar("shared"))];
+
+    expect(fontes).toContain(SEED);
+
+    for (const caminho of fontes.filter((fonte) => fonte !== SEED)) {
+      expect(await semComentarios(caminho), caminho).not.toMatch(/\bfetch\s*\(|https?:\/\//);
+    }
+  });
+});
+
+const listar = async (pasta: string): Promise<string[]> => {
+  const arquivos = await readdir(join(raiz, pasta), { recursive: true });
+  return arquivos.filter((arquivo) => arquivo.endsWith(".ts")).map((arquivo) => posix.join(pasta, arquivo.replaceAll("\\", "/")));
+};
 
 describe.each(["shared/reducer.ts", "server/decisor.ts"])("%s é puro", (caminho) => {
   it.each(IMPUREZAS)("não tem $nome", async ({ padrao }) => {

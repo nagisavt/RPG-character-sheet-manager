@@ -76,6 +76,14 @@ const servidor = await iniciarServidor({
 console.log(`Mesa no ar em http://localhost:${servidor.porta}/mestre`);
 console.log(`Log com ${servidor.log().length} Evento(s). Sessão ativa: ${servidor.estado.sessaoAtiva}`);
 
+const catalogo = servidor.catalogo();
+console.log(
+  `Catálogo: ${catalogo.magia} magias, ${catalogo.item} itens, ${catalogo.monstro} monstros.`,
+);
+if (catalogo.magia + catalogo.item + catalogo.monstro === 0) {
+  console.log("  Vazio. Rode `npm run catalogo:seed` **antes** da Sessão: durante ela não há rede.");
+}
+
 const desligar = async () => {
   await servidor.encerrar();
   await vite.close();

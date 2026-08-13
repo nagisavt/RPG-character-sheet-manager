@@ -1,4 +1,7 @@
 import { createInterface } from "node:readline/promises";
+import type { TipoDoCatalogo } from "../shared/catalogo.js";
+import { VERBETES } from "../shared/linha-de-comando.js";
+import { catalogoDeExemplo } from "./catalogo-exemplo.js";
 import { criarMesa } from "./criar-mesa.js";
 import { fichasDeExemplo } from "./fichas-exemplo.js";
 
@@ -9,7 +12,7 @@ import { fichasDeExemplo } from "./fichas-exemplo.js";
  * O harness é código de produção-adjacente, não uma fixture escondida: rodar
  * ele fora do contexto de teste é o que garante isso.
  */
-const mesa = await criarMesa({ fichas: fichasDeExemplo });
+const mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
 
 const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
 const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
@@ -19,8 +22,12 @@ console.log(`Mesa no ar na porta ${mesa.porta}, com o mestre, o celular do Thori
 console.log(`Log em ${mesa.caminhoDoLog}`);
 // As linhas com `/` são Comandos da Mesa, digitados como o mestre digitaria na
 // tela dele. As palavras soltas são controles daqui, do playground.
-console.log("Comandos: /iniciar, /finalizar, /dano <personagem> <n>, /cura <personagem> <n>");
-console.log("Playground: estado, log, reiniciar, sair");
+//
+// A lista sai de `VERBETES`, e não escrita aqui: uma cópia à mão já tinha
+// esquecido o `/cena` no dia seguinte ao dia em que ele nasceu.
+console.log(`Comandos: ${VERBETES.map((verbete) => verbete.uso).join(", ")}`);
+console.log("Playground: estado, log, catalogo <tipo> <chave>, reiniciar, sair");
+console.log(`  no Catálogo: ${catalogoDeExemplo.map((entrada) => entrada.chave).join(", ")}`);
 
 const vidas = () =>
   Object.values(tv.estado.personagens)
@@ -41,6 +48,16 @@ const responder = async (linha: string): Promise<boolean> => {
     for (const evento of mestre.eventos) {
       console.log(`${evento.id}  ${evento.timestamp}  ${evento.tipo}  (${evento.autor.tipo})`);
     }
+    return true;
+  }
+
+  if (linha.startsWith("catalogo ")) {
+    const [, tipo, chave] = linha.split(/\s+/);
+    // O Catálogo responde pelo mesmo socket, mas fora do fluxo de Comando: a
+    // regra do SRD não é fato da Mesa e não entra no Log.
+    const entrada = await celular.consultar({ tipo: tipo as TipoDoCatalogo, chave: chave ?? "" });
+    console.log(entrada === null ? "não está no Catálogo" : entrada);
+    console.log(`  o Log continua com ${mestre.eventos.length} Evento(s)`);
     return true;
   }
 

@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
+import { catalogoDeExemplo, misselMagico } from "../harness/catalogo-exemplo.js";
 import { criarMesa, type Mesa } from "../harness/criar-mesa.js";
 import { elara, fichasDeExemplo, thorin } from "../harness/fichas-exemplo.js";
 
@@ -128,16 +129,8 @@ describe("Vida", () => {
 });
 
 describe("Catálogo", () => {
-  const misselMagico = {
-    tipo: "magia",
-    chave: "srd-2024_magic-missile",
-    nome: "Míssil Mágico",
-    descricao: "Três dardos de energia, cada um com 1d4+1 de dano de força.",
-    detalhes: { nivel: 1, escola: "Evocação" },
-  } as const;
-
   it("qualquer tela consulta uma magia por identificador, com a descrição inteira", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: [misselMagico] });
+    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
 
     const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
 
@@ -147,7 +140,7 @@ describe("Catálogo", () => {
   });
 
   it("o que não está no Catálogo volta nulo, sem derrubar a conexão", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: [misselMagico] });
+    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
 
     const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
 
@@ -157,7 +150,7 @@ describe("Catálogo", () => {
   });
 
   it("consultar o Catálogo não vira Evento: ele não entra no Log", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: [misselMagico] });
+    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     await mestre.digitar("/iniciar");
@@ -169,7 +162,7 @@ describe("Catálogo", () => {
   });
 
   it("o Catálogo sobrevive ao reinício sem ser semeado de novo", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: [misselMagico] });
+    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
 
     const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
     await mesa.reiniciar();

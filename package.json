@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "tsx watch server/dev.ts",
     "mesa:demo": "tsx harness/demo.ts",
+    "catalogo:seed": "tsx server/catalogo-seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.web.json"
