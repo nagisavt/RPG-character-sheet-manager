@@ -25,8 +25,15 @@ export type Mesa = {
   porta: number;
   caminhoDoLog: string;
   conectar: (credencial: Credencial) => Promise<Cliente>;
-  /** Derruba o servidor e sobe outro no mesmo Log e na mesma porta. Os clientes voltam sozinhos. */
-  reiniciar: () => Promise<void>;
+  /**
+   * Derruba o servidor e sobe outro no mesmo Log e na mesma porta. Os clientes
+   * voltam sozinhos.
+   *
+   * As Fichas novas são o mestre editando o arquivo entre uma subida e outra —
+   * subir de nível, corrigir um erro de digitação. É a única forma de uma Ficha
+   * mudar, e é de propósito (ADR-0002).
+   */
+  reiniciar: (fichasEditadas?: readonly Ficha[]) => Promise<void>;
   encerrar: () => Promise<void>;
 };
 
@@ -56,7 +63,8 @@ export const criarMesa = async (opcoes: OpcoesDaMesa): Promise<Mesa> => {
   const pasta = opcoes.caminhoDoLog === undefined ? await mkdtemp(join(tmpdir(), "mesa-")) : null;
   const caminhoDoLog = opcoes.caminhoDoLog ?? join(pasta!, "mesa.db");
 
-  let servidor = await iniciarServidor({ fichas: opcoes.fichas, caminhoDoLog, senhaDoMestre });
+  let fichas = opcoes.fichas;
+  let servidor = await iniciarServidor({ fichas, caminhoDoLog, senhaDoMestre });
   const porta = servidor.porta;
   const clientes: ClienteInterno[] = [];
 
@@ -79,15 +87,11 @@ export const criarMesa = async (opcoes: OpcoesDaMesa): Promise<Mesa> => {
       return cliente;
     },
 
-    reiniciar: async () => {
+    reiniciar: async (fichasEditadas) => {
+      if (fichasEditadas !== undefined) fichas = fichasEditadas;
       const voltaram = clientes.map((cliente) => cliente.aguardarSnapshot());
       await servidor.encerrar();
-      servidor = await iniciarServidor({
-        fichas: opcoes.fichas,
-        caminhoDoLog,
-        senhaDoMestre,
-        porta,
-      });
+      servidor = await iniciarServidor({ fichas, caminhoDoLog, senhaDoMestre, porta });
       await Promise.all(voltaram);
     },
 

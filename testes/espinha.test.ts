@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { criarMesa, type Mesa } from "../harness/criar-mesa.js";
-import { fichasDeExemplo } from "../harness/fichas-exemplo.js";
+import { elara, fichasDeExemplo, thorin } from "../harness/fichas-exemplo.js";
 
 let mesa: Mesa;
 
@@ -190,6 +190,68 @@ describe("a linha que o mestre digita", () => {
       motivo: "Escreva '/dano <personagem> <quantidade>'",
     });
     expect(mestre.eventos).toEqual([]);
+  });
+});
+
+/**
+ * O ADR-0003 em cena. A Ficha muda entre sessões; o Log nunca muda. O que estes
+ * testes provam é que a segunda parte continua valendo depois da primeira.
+ */
+describe("a Ficha editada entre duas subidas", () => {
+  it("subir a vida máxima e reiniciar não altera a vida já registrada", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.digitar("/dano thorin 8");
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
+
+    // Thorin sobe de nível: o mestre edita `fichas/mesa.ts` e reinicia.
+    await mesa.reiniciar([{ ...thorin, vidaMaxima: 35 }, elara]);
+
+    // O teto subiu, o machucado continua o mesmo. Se o Evento guardasse só a
+    // diferença, o replay teria recomeçado em 35 e dado 27.
+    expect(tv.estado.personagens["thorin"]).toEqual({
+      id: "thorin",
+      nome: "Thorin",
+      vida: 20,
+      vidaMaxima: 35,
+    });
+  });
+
+  it("uma cura antiga não muda de sentido quando o teto sobe", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.digitar("/dano thorin 8");
+    await mestre.digitar("/cura thorin 99");
+    // Curou até o teto de janeiro, que era 28.
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(28);
+
+    await mesa.reiniciar([{ ...thorin, vidaMaxima: 35 }, elara]);
+
+    // E continua sendo 28: aquela cura aconteceu quando o teto era 28, e o Log
+    // não é reinterpretado à luz da Ficha de hoje.
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(28);
+  });
+
+  it("corrigir um erro de digitação é editar o arquivo e reiniciar, sem gravar nada", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+    await mestre.digitar("/dano thorin 8");
+
+    // O nome estava escrito errado desde o começo da campanha.
+    await mesa.reiniciar([{ ...thorin, nome: "Thorim" }, elara]);
+
+    expect(tv.estado.personagens["thorin"]?.nome).toBe("Thorim");
+    // E o Log não cresceu: não existe Comando de correção, e é por isso que não
+    // existe tela de cadastro de Ficha entrando pela porta dos fundos.
+    expect(mestre.eventos).toHaveLength(1);
   });
 });
 
