@@ -1,4 +1,9 @@
-import { createServer, type Server as ServidorHttp } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server as ServidorHttp,
+  type ServerResponse,
+} from "node:http";
 import { Server as ServidorSocket, type Socket } from "socket.io";
 import type { Comando, Resposta } from "../shared/comandos.js";
 import { estadoInicial } from "../shared/estado.js";
@@ -23,6 +28,12 @@ export type OpcoesDoServidor = {
   senhaDoMestre: string;
   /** `0` pede uma porta livre ao sistema. A porta de verdade sai em `servidor.porta`. */
   porta?: number;
+  /**
+   * Quem serve as telas. Opcional porque os testes sobem a Mesa sem navegador
+   * nenhum: a costura é o socket, e o harness não deve carregar um bundler para
+   * provar que um Comando virou Evento.
+   */
+  paginas?: (requisicao: IncomingMessage, resposta: ServerResponse) => void;
 };
 
 export type Servidor = {
@@ -44,7 +55,10 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
   let estado = reconstruir(estadoInicial(opcoes.fichas), log);
   let ate = log.at(-1)?.id ?? 0;
 
-  const http = createServer();
+  // As telas entram como listener do http **antes** do socket.io: o engine.io
+  // guarda quem já estava ali e só repassa o que não for dele. Registrar depois
+  // faria as duas coisas responderem à mesma requisição.
+  const http = opcoes.paginas === undefined ? createServer() : createServer(opcoes.paginas);
   const io = new ServidorSocket<{ comando: ComandoDoCliente }, EventosDoServidor, never, Sessao>(
     http,
     { serveClient: false },
