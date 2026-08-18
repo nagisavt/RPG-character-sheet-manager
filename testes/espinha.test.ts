@@ -363,7 +363,7 @@ describe("Combate", () => {
 
     await mestre.enviar({ tipo: "iniciarCombate" });
 
-    expect(tv.estado.combate).toEqual({ monstros: [], iniciativas: [] });
+    expect(tv.estado.combate).toEqual({ monstros: [], iniciativas: [], fila: null });
   });
 
   it("recusa entrar em Combate duas vezes", async () => {
@@ -672,6 +672,222 @@ describe("Combate", () => {
     await mestre.digitar("/iniciativa Goblin arqueiro 11");
 
     expect(mestre.estado.combate?.iniciativas[0]).toMatchObject({ d20: 11, resultado: 13 });
+  });
+});
+
+describe("Fila de iniciativa", () => {
+  const goblins = [{ nome: "Goblin arqueiro", quantidade: 3, bonusDeIniciativa: 2 }];
+  const thorinNaFila = { tipo: "personagem", personagem: "thorin" } as const;
+  const elaraNaFila = { tipo: "personagem", personagem: "elara" } as const;
+  const goblinNaFila = { tipo: "monstro", nome: "Goblin arqueiro" } as const;
+
+  /** Um Combate com os goblins declarados e as três iniciativas dentro. */
+  const combatePronto = async () => {
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const dele = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const dela = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    await mestre.enviar({ tipo: "iniciarCombate" });
+    await mestre.enviar({ tipo: "declararMonstros", monstros: goblins });
+    await dele.enviar({ tipo: "declararIniciativa", d20: 8 });
+    await dela.enviar({ tipo: "declararIniciativa", d20: 14 });
+    await mestre.enviar({ tipo: "declararIniciativaDoMonstro", nome: "Goblin arqueiro", d20: 11 });
+
+    return mestre;
+  };
+
+  it("o mestre publica a ordem que ele escolheu, e a Mesa recebe ela inteira", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    // A ordem é escolhida, não calculada: Elara tirou 17 e o Goblin 13, e o
+    // mestre pôs o Goblin primeiro porque quis.
+    await mestre.enviar({ tipo: "publicarFila", fila: [goblinNaFila, elaraNaFila, thorinNaFila] });
+
+    expect(tv.estado.combate?.fila).toEqual([goblinNaFila, elaraNaFila, thorinNaFila]);
+  });
+
+  it("a Fila é lista de identificadores, e não das iniciativas", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, goblinNaFila, thorinNaFila] });
+
+    const publicada = mestre.eventos.at(-1);
+    expect(publicada).toMatchObject({ tipo: "FilaPublicada" });
+    // Nenhum número da rolagem viaja no Evento da Fila.
+    expect(JSON.stringify(publicada)).not.toContain("resultado");
+    expect(JSON.stringify(publicada)).not.toContain("d20");
+  });
+
+  it("a Mesa vê os nomes em ordem, e nenhum número", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, goblinNaFila, thorinNaFila] });
+
+    expect(tv.estado.combate?.fila).toHaveLength(3);
+    // A projeção já tirava as iniciativas da TV, e continua tirando: a Fila diz
+    // a ordem, e a ordem não conta quanto cada um rolou.
+    expect(tv.estado.combate?.iniciativas).toEqual([]);
+  });
+
+  it("as barras de vida continuam valendo durante o Combate", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, thorinNaFila, goblinNaFila] });
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -8 });
+
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
+  });
+
+  it("publicar de novo substitui a Fila inteira: é assim que o reforço entra", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, goblinNaFila, thorinNaFila] });
+
+    // Chega um ogro no meio do Combate.
+    const ogro = { nome: "Ogro", quantidade: 1, bonusDeIniciativa: -1 };
+    await mestre.enviar({ tipo: "declararMonstros", monstros: [...goblins, ogro] });
+    await mestre.enviar({ tipo: "declararIniciativaDoMonstro", nome: "Ogro", d20: 5 });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila, { tipo: "monstro", nome: "Ogro" }, goblinNaFila, thorinNaFila],
+    });
+
+    expect(tv.estado.combate?.fila).toHaveLength(4);
+    expect(tv.estado.combate?.fila?.[1]).toEqual({ tipo: "monstro", nome: "Ogro" });
+  });
+
+  it("recusa um Participante que não está neste Combate", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+
+    const resposta = await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila, { tipo: "monstro", nome: "Dragão" }],
+    });
+
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "'monstro:Dragão' não está neste Combate",
+    });
+  });
+
+  it("recusa o mesmo Participante duas vezes na Fila", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+
+    const resposta = await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila, thorinNaFila, elaraNaFila],
+    });
+
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "'personagem:elara' aparece duas vezes na Fila",
+    });
+  });
+
+  it("publica sem esperar o atrasado: quando o Combate começa não é do app", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const dela = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    await mestre.enviar({ tipo: "iniciarCombate" });
+    await dela.enviar({ tipo: "declararIniciativa", d20: 14 });
+
+    // Thorin foi ao banheiro e não declarou nada. O mestre publica assim mesmo,
+    // e republica quando ele voltar.
+    const resposta = await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila] });
+
+    expect(resposta).toEqual({ aceito: true });
+    expect(mestre.estado.combate?.fila).toEqual([elaraNaFila]);
+  });
+
+  it("recusa publicar fora de Combate", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila] });
+
+    expect(resposta).toEqual({ aceito: false, motivo: "Nenhum Combate em curso" });
+  });
+
+  it("o jogador não publica a Fila: a ordem é escolhida pelo mestre", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    await combatePronto();
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    const resposta = await celular.enviar({ tipo: "publicarFila", fila: [elaraNaFila] });
+
+    expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'publicarFila'" });
+  });
+
+  it("encerrar o Combate devolve a TV para a Cena", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "trocarCena", cena: "taverna-do-javali" });
+    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, thorinNaFila, goblinNaFila] });
+    expect(tv.estado.combate?.fila).toHaveLength(3);
+
+    await mestre.digitar("/encerra");
+
+    expect(tv.estado.combate).toBeNull();
+    // A Cena estava lá embaixo o tempo todo, esperando.
+    expect(tv.estado.cena).toBe("taverna-do-javali");
+  });
+
+  it("recusa encerrar fora de Combate", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.digitar("/encerra");
+
+    expect(resposta).toEqual({ aceito: false, motivo: "Nenhum Combate em curso" });
+  });
+
+  it("o Combate seguinte começa sem a Fila do anterior", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+
+    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, thorinNaFila, goblinNaFila] });
+    await mestre.enviar({ tipo: "encerrarCombate" });
+    await mestre.enviar({ tipo: "iniciarCombate" });
+
+    expect(mestre.estado.combate).toEqual({ monstros: [], iniciativas: [], fila: null });
+  });
+
+  it("a Fila sobrevive ao reinício, porque ela está no Log", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await combatePronto();
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "publicarFila", fila: [goblinNaFila, elaraNaFila, thorinNaFila] });
+    await mesa.reiniciar();
+
+    expect(tv.estado.combate?.fila).toEqual([goblinNaFila, elaraNaFila, thorinNaFila]);
   });
 });
 

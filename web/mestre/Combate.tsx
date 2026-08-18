@@ -1,14 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type Ref } from "react";
 import { chamada, chaveDe, nomeDe } from "../../shared/combate.js";
 import type { Comando, Resposta } from "../../shared/comandos.js";
-import type { Estado, Iniciativa, Monstro } from "../../shared/tipos.js";
+import type { Estado, Iniciativa, Monstro, Participante } from "../../shared/tipos.js";
 
 /**
  * O Combate no notebook do mestre: declarar os Monstros, ver as iniciativas
- * chegando de vários celulares ao mesmo tempo, e saber de quem ainda falta
- * cobrar.
- *
- * A Fila — pegar isto e escolher a ordem — é a issue #11. Aqui só se junta.
+ * chegando de vários celulares ao mesmo tempo, saber de quem ainda falta cobrar,
+ * e montar a Fila para publicar de uma vez na TV.
  *
  * Nada nesta tela rola nada. O d20 do Monstro é digitado do mesmo jeito que o
  * do jogador: o dado é rolado na mesa, por uma pessoa (ADR-0001).
@@ -21,6 +19,7 @@ export const Combate = ({
   enviar: (comando: Comando) => Promise<Resposta>;
 }) => {
   const [recusa, setRecusa] = useState<string | null>(null);
+  const montar = useRef<HTMLDialogElement>(null);
 
   /**
    * Devolve se deu certo, e guarda o motivo quando não. Sem isto, uma recusa de
@@ -81,9 +80,128 @@ export const Combate = ({
         declarar={(monstros) => tentar({ tipo: "declararMonstros", monstros })}
       />
 
+      <div className="acoes">
+        <button onClick={() => montar.current?.showModal()}>
+          {combate.fila === null ? "montar a Fila" : "remontar a Fila"}
+        </button>
+        <button onClick={() => void tentar({ tipo: "encerrarCombate" })}>encerrar Combate</button>
+      </div>
+
+      <MontarFila
+        ref={montar}
+        estado={estado}
+        publicar={async (fila) => {
+          const aceito = await tentar({ tipo: "publicarFila", fila });
+          if (aceito) montar.current?.close();
+          return aceito;
+        }}
+      />
+
       {recusa !== null && <p className="resposta recusada">{recusa}</p>}
     </section>
   );
+};
+
+/**
+ * O modal onde a Fila é montada: a lista dos Participantes, e uma seta para
+ * cima e uma para baixo em cada um.
+ *
+ * **O app não ordena.** Nem por iniciativa, nem como sugestão: a Fila é uma
+ * ordem escolhida, não uma ordem calculada (`CONTEXT.md`), e um "já deixei
+ * ordenado para você" seria o app decidindo o empate que é da mesa. O que ele
+ * mostra é o que cada um tirou, do lado do nome, para o mestre decidir olhando.
+ */
+const MontarFila = ({
+  ref,
+  estado,
+  publicar,
+}: {
+  ref: Ref<HTMLDialogElement>;
+  estado: Estado;
+  publicar: (fila: readonly Participante[]) => Promise<boolean>;
+}) => {
+  const combate = estado.combate;
+  const [ordem, setOrdem] = useState<readonly Participante[] | null>(null);
+
+  if (combate === null) return null;
+
+  // Enquanto o mestre não mexeu, a lista é a da chamada — os personagens e
+  // depois os Monstros, na ordem em que foram declarados.
+  const daChamada = chamada(estado, combate).map(({ participante }) => participante);
+  const atual = ordem === null ? daChamada : reconciliar(ordem, daChamada);
+
+  const mover = (de: number, para: number) => {
+    if (para < 0 || para >= atual.length) return;
+    const movida = [...atual];
+    const [saiu] = movida.splice(de, 1);
+    movida.splice(para, 0, saiu!);
+    setOrdem(movida);
+  };
+
+  return (
+    <dialog className="modal" ref={ref}>
+      <header>
+        <h2>Fila de iniciativa</h2>
+        <form method="dialog">
+          <button aria-label="Fechar">×</button>
+        </form>
+      </header>
+
+      <ol className="montagem">
+        {atual.map((participante, posicao) => {
+          const rolou = combate.iniciativas.find(
+            (qual) => chaveDe(qual.participante) === chaveDe(participante),
+          );
+
+          return (
+            <li key={chaveDe(participante)}>
+              <span>{nomeDe(estado, combate, participante)}</span>
+              <span className="apagado">{rolou === undefined ? "—" : rolou.resultado}</span>
+              <button
+                onClick={() => mover(posicao, posicao - 1)}
+                disabled={posicao === 0}
+                aria-label={`Subir ${nomeDe(estado, combate, participante)}`}
+              >
+                ↑
+              </button>
+              <button
+                onClick={() => mover(posicao, posicao + 1)}
+                disabled={posicao === atual.length - 1}
+                aria-label={`Descer ${nomeDe(estado, combate, participante)}`}
+              >
+                ↓
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="acoes">
+        <button onClick={() => void publicar(atual)}>publicar para a Mesa</button>
+      </div>
+    </dialog>
+  );
+};
+
+/**
+ * A ordem que o mestre montou, mais o que apareceu depois dela.
+ *
+ * O reforço declarado no meio do Combate entra **no fim**, e não desmancha o que
+ * ele já tinha arrastado: arrumar sete Participantes e ver tudo voltar ao lugar
+ * porque um ogro chegou é o tipo de coisa que faz o mestre desistir da tela e ir
+ * gritar a ordem. Quem saiu da chamada some daqui junto.
+ */
+const reconciliar = (
+  ordem: readonly Participante[],
+  daChamada: readonly Participante[],
+): readonly Participante[] => {
+  const existe = new Set(daChamada.map(chaveDe));
+  const jaOrdenados = new Set(ordem.map(chaveDe));
+
+  return [
+    ...ordem.filter((participante) => existe.has(chaveDe(participante))),
+    ...daChamada.filter((participante) => !jaOrdenados.has(chaveDe(participante))),
+  ];
 };
 
 /**

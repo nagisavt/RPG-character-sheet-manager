@@ -26,6 +26,9 @@ const QUEM_PODE: Record<TipoDeComando, Identidade["como"]> = {
   // tela de Log, que é outra coisa.
   atualizarAnotacao: "jogador",
   iniciarCombate: "mestre",
+  encerrarCombate: "mestre",
+  // A Fila é uma ordem escolhida, e quem escolhe é ele.
+  publicarFila: "mestre",
   declararMonstros: "mestre",
   // A segunda metade da regra: o jogador declara a **própria** iniciativa, e o
   // Comando não tem onde carregar outro Participante.

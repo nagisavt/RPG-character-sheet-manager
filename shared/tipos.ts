@@ -24,8 +24,10 @@ export type Corpo =
   | AnotacaoAtualizada
   | CenaTrocada
   | { tipo: "CombateIniciado" }
+  | { tipo: "CombateEncerrado" }
   | MonstrosDeclarados
-  | IniciativaDeclarada;
+  | IniciativaDeclarada
+  | FilaPublicada;
 
 /**
  * Quem está na Fila de iniciativa. É o único lugar em que um personagem e um
@@ -70,6 +72,18 @@ export type IniciativaDeclarada = {
   participante: Participante;
   d20: number;
   resultado: number;
+};
+
+/**
+ * O mestre publicou a Fila de iniciativa: a ordem, de uma vez, para a Mesa.
+ *
+ * Guarda a **lista de identificadores**, e não as iniciativas: a ordem é
+ * escolhida, não calculada (`CONTEXT.md`). Quem republica substitui a Fila
+ * inteira — é assim que o reforço declarado no meio do Combate entra.
+ */
+export type FilaPublicada = {
+  tipo: "FilaPublicada";
+  fila: readonly Participante[];
 };
 
 /**
@@ -239,6 +253,11 @@ export type Combate = {
   monstros: readonly Monstro[];
   /** Uma por Participante que já declarou, na ordem em que chegaram. */
   iniciativas: readonly Iniciativa[];
+  /**
+   * A ordem que o mestre escolheu e publicou, ou `null` enquanto ele ainda
+   * monta. É ela que troca a TV para o layout de Combate.
+   */
+  fila: readonly Participante[] | null;
 };
 
 export type Iniciativa = { participante: Participante; d20: number; resultado: number };

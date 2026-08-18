@@ -630,3 +630,68 @@ span.voltar {
   min-height: 2.25rem;
   font-size: 0.8125rem;
 }
+
+/* A Fila na TV. Mesma régua da Cena: tudo em `em`, a partir do tamanho de fonte
+   da TV, porque a distância de leitura é a mesma — dois metros. */
+.fila {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  background: #000;
+  overflow: hidden;
+}
+
+.fila ol {
+  list-style: none;
+  margin: 0;
+  padding: 0.5em 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  text-align: center;
+}
+
+.fila li {
+  font-size: 1.6em;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.montagem {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  counter-reset: posicao;
+}
+
+.montagem li {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.montagem li span:nth-child(2) {
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+  text-align: right;
+}
+
+/* Setas: alvo de dedo, e o mestre mexe nisto com a mesa esperando. */
+.montagem button {
+  width: 2.75rem;
+  padding: 0;
+}
+
+.acoes {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.acoes button {
+  flex: 1;
+}

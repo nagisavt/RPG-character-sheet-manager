@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import type { Personagem } from "../../shared/tipos.js";
+import { chaveDe, nomeDe } from "../../shared/combate.js";
+import type { Combate, Estado, Personagem } from "../../shared/tipos.js";
 import { BarraDeVida, ImagemOuRotulo, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 
@@ -29,9 +30,17 @@ export const TelaDaMesa = () => {
 
   const personagens = Object.values(ligacao.estado.personagens);
 
+  const combate = ligacao.estado.combate;
+
   return (
     <div className="tv">
-      <Cena cena={ligacao.estado.cena} />
+      {/* A Fila publicada troca o fundo; a Cena continua embaixo, esperando o
+          Combate acabar. As barras de vida ficam nos dois layouts. */}
+      {combate?.fila == null ? (
+        <Cena cena={ligacao.estado.cena} />
+      ) : (
+        <Fila estado={ligacao.estado} combate={combate} />
+      )}
       <ul className="vidas">
         {personagens.map((personagem) => (
           <Barra
@@ -61,6 +70,23 @@ const Cena = ({ cena }: { cena: string | null }) => {
 
   return <ImagemOuRotulo className="cena" caminho={`/cenas/${cena}.png`} rotulo={cena} />;
 };
+
+/**
+ * A Fila de iniciativa em tela cheia: os nomes, na ordem que o mestre escolheu.
+ *
+ * **Sem número nenhum** — nem o que cada um rolou, nem a posição. E nada aqui
+ * acompanha de quem é a vez: não existe noção de turno neste app, e destacar
+ * alguém seria inventar uma. Quem diz "é sua vez" é a pessoa na cabeceira.
+ */
+const Fila = ({ estado, combate }: { estado: Estado; combate: Combate }) => (
+  <div className="fila">
+    <ol>
+      {(combate.fila ?? []).map((participante) => (
+        <li key={chaveDe(participante)}>{nomeDe(estado, combate, participante)}</li>
+      ))}
+    </ol>
+  </div>
+);
 
 /**
  * A vida máxima define o **comprimento** da barra, comparada com a maior da

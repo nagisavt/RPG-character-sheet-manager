@@ -56,6 +56,11 @@ export const VERBETES: readonly Verbete[] = [
     exemplo: "/combate",
   },
   {
+    uso: "/encerra",
+    descricao: "Encerra o Combate. A TV volta para a Cena.",
+    exemplo: "/encerra",
+  },
+  {
     uso: "/iniciativa <monstro> <d20>",
     descricao: "O d20 que você rolou por um Monstro. O bônus dele o servidor soma.",
     exemplo: "/iniciativa goblin-arqueiro 14",
@@ -95,6 +100,9 @@ export const lerLinha = (linha: string): Leitura => {
 
     case "/combate":
       return { comando: { tipo: "iniciarCombate" } };
+
+    case "/encerra":
+      return { comando: { tipo: "encerrarCombate" } };
 
     case "/iniciativa": {
       // O nome do Monstro tem espaço — "Goblin arqueiro" é o que a mesa fala —,

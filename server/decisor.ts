@@ -1,7 +1,8 @@
-import { ehD20 } from "../shared/combate.js";
+import { chamada, chaveDe, ehD20 } from "../shared/combate.js";
 import type { Comando } from "../shared/comandos.js";
 import type {
   Autor,
+  Combate,
   Estado,
   EventoNovo,
   Monstro,
@@ -121,6 +122,30 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
     case "iniciarCombate":
       if (estado.combate !== null) return { recusa: "O Combate já está em curso" };
       return { eventos: [{ tipo: "CombateIniciado", autor, audiencia: ["publico"] }] };
+
+    case "encerrarCombate":
+      if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
+      return { eventos: [{ tipo: "CombateEncerrado", autor, audiencia: ["publico"] }] };
+
+    case "publicarFila": {
+      if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
+
+      const problema = conferirFila(estado, estado.combate, comando.fila);
+      if (problema !== null) return { recusa: problema };
+
+      return {
+        eventos: [
+          {
+            tipo: "FilaPublicada",
+            fila: comando.fila,
+            autor,
+            // Pública: a Fila é o que a TV mostra, no meio da mesa. Os números
+            // da rolagem é que não são dela.
+            audiencia: ["publico"],
+          },
+        ],
+      };
+    }
 
     case "declararMonstros": {
       if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
@@ -266,6 +291,39 @@ const iniciativa = (
       },
     ],
   };
+};
+
+/**
+ * O que impede uma ordem de virar Fila, ou `null` se ela serve.
+ *
+ * O que **não** se confere aqui: se todo mundo já declarou. O mestre publica com
+ * quem está na mesa e republica quando o atrasado chegar — esperar seria o app
+ * decidindo quando o Combate começa, e ele não decide (ADR-0001).
+ */
+const conferirFila = (
+  estado: Estado,
+  combate: Combate,
+  fila: readonly Participante[],
+): string | null => {
+  if (fila.length === 0) return "A Fila está vazia";
+
+  const conhecidos = new Set(
+    chamada(estado, combate).map(({ participante }) => chaveDe(participante)),
+  );
+
+  const vistos = new Set<string>();
+  for (const participante of fila) {
+    const chave = chaveDe(participante);
+    if (!conhecidos.has(chave)) {
+      return `'${chave}' não está neste Combate`;
+    }
+    // Um Participante duas vezes na Fila seria a mesma pessoa agindo em dois
+    // lugares da ordem, e a mesa não teria como saber qual das duas vale.
+    if (vistos.has(chave)) return `'${chave}' aparece duas vezes na Fila`;
+    vistos.add(chave);
+  }
+
+  return null;
 };
 
 /** O que impede uma lista de Monstros de virar Fila, ou `null` se ela serve. */

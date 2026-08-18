@@ -20,9 +20,18 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
       return { ...estado, cena: evento.cena };
 
     case "CombateIniciado":
-      // Começa vazio: os Monstros e as iniciativas chegam depois, cada um no
-      // seu Evento. Iniciar duas vezes é recusado pelo decisor, não aqui.
-      return { ...estado, combate: { monstros: [], iniciativas: [] } };
+      // Começa vazio: os Monstros, as iniciativas e a Fila chegam depois, cada
+      // um no seu Evento. Iniciar duas vezes é recusado pelo decisor, não aqui.
+      return { ...estado, combate: { monstros: [], iniciativas: [], fila: null } };
+
+    case "CombateEncerrado":
+      // O Combate sai do estado, e o Log fica: a noite continua sendo lida.
+      return { ...estado, combate: null };
+
+    case "FilaPublicada":
+      // Substitui a Fila inteira. Publicar de novo, com o reforço declarado no
+      // meio do Combate, é a mesma coisa que publicar a primeira vez.
+      return comCombate(estado, (combate) => ({ ...combate, fila: evento.fila }));
 
     case "MonstrosDeclarados":
       return comCombate(estado, (combate) => ({ ...combate, monstros: evento.monstros }));
