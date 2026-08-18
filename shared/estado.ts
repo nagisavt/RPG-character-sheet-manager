@@ -23,4 +23,8 @@ const personagemDe = (ficha: Ficha) => ({
   nome: ficha.nome,
   vida: ficha.vidaMaxima,
   vidaMaxima: ficha.vidaMaxima,
+  // Zero, e não um campo da Ficha: a Vida bônus é concedida durante a Sessão e
+  // gasta na mesma noite. Começar a campanha com ela seria a Ficha inventando
+  // um fato que ninguém declarou.
+  vidaBonus: 0,
 });

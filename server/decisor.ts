@@ -1,5 +1,5 @@
 import type { Comando } from "../shared/comandos.js";
-import type { Autor, Estado, EventoNovo } from "../shared/tipos.js";
+import type { Autor, Estado, EventoNovo, Personagem } from "../shared/tipos.js";
 
 /**
  * A decisão sobre um Comando: os Eventos que ele produz, ou a recusa.
@@ -52,9 +52,9 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
         return { recusa: "A diferença de vida precisa ser um número inteiro" };
       }
 
-      // O teto não recusa o Comando, limita o resultado: uma cura de 8 em quem
-      // está a 3 do máximo aconteceu, e o Evento registra as duas coisas.
-      const vida = entre(0, personagem.vida + comando.diferenca, personagem.vidaMaxima);
+      // Os limites não recusam o Comando, limitam o resultado: uma cura de 8 em
+      // quem está a 3 do máximo aconteceu, e o Evento registra as duas coisas.
+      const { vida, vidaBonus } = distribuir(personagem, comando.diferenca);
       return {
         eventos: [
           {
@@ -62,8 +62,34 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
             personagem: comando.personagem,
             declarado: comando.diferenca,
             vida,
+            vidaBonus,
             autor,
             // A vida é pública: ela está na TV, em barra, para a mesa inteira ver.
+            audiencia: ["publico"],
+          },
+        ],
+      };
+    }
+
+    case "concederVidaBonus": {
+      const personagem = estado.personagens[comando.personagem];
+      if (personagem === undefined) {
+        return { recusa: `Personagem desconhecido: ${comando.personagem}` };
+      }
+      // Zero é válido: é o efeito que acabou. Negativo não — tirar vida é
+      // `/dano`, e um pote negativo é um estado que não existe.
+      if (!Number.isInteger(comando.vidaBonus) || comando.vidaBonus < 0) {
+        return { recusa: "A Vida bônus precisa ser um inteiro de zero para cima" };
+      }
+
+      return {
+        eventos: [
+          {
+            tipo: "VidaBonusConcedida",
+            personagem: comando.personagem,
+            vidaBonus: comando.vidaBonus,
+            autor,
+            // Pública pelo mesmo motivo da vida: ela é uma barra na TV.
             audiencia: ["publico"],
           },
         ],
@@ -72,5 +98,27 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
   }
 };
 
-const entre = (minimo: number, valor: number, maximo: number): number =>
-  Math.min(Math.max(valor, minimo), maximo);
+/**
+ * Onde os dois potes ficam depois de uma diferença declarada (ADR-0001).
+ *
+ * O dano come a Vida bônus primeiro e só o que sobra encosta na vida. A cura não
+ * a devolve: ela não é vida machucada, é um pote que só o mestre enche.
+ */
+const distribuir = (
+  personagem: Personagem,
+  diferenca: number,
+): { vida: number; vidaBonus: number } => {
+  if (diferenca >= 0) {
+    return {
+      vida: Math.min(personagem.vida + diferenca, personagem.vidaMaxima),
+      vidaBonus: personagem.vidaBonus,
+    };
+  }
+
+  const dano = -diferenca;
+  const doBonus = Math.min(dano, personagem.vidaBonus);
+  return {
+    vida: Math.max(personagem.vida - (dano - doBonus), 0),
+    vidaBonus: personagem.vidaBonus - doBonus,
+  };
+};

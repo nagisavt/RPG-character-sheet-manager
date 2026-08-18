@@ -116,6 +116,7 @@ const Vida = ({
       <strong>{personagem.nome}</strong>
       <span>
         {personagem.vida} / {personagem.vidaMaxima}
+        {personagem.vidaBonus > 0 && <em className="bonus">+{personagem.vidaBonus}</em>}
       </span>
     </div>
 
@@ -129,6 +130,23 @@ const Vida = ({
     >
       <div style={{ width: `${(personagem.vida / personagem.vidaMaxima) * 100}%` }} />
     </div>
+
+    {personagem.vidaBonus > 0 && (
+      <div
+        className="barra bonus"
+        role="meter"
+        aria-label={`Vida bônus de ${personagem.nome}`}
+        aria-valuenow={personagem.vidaBonus}
+        aria-valuemin={0}
+        aria-valuemax={personagem.vidaMaxima}
+      >
+        <div
+          style={{
+            width: `${Math.min(personagem.vidaBonus / personagem.vidaMaxima, 1) * 100}%`,
+          }}
+        />
+      </div>
+    )}
 
     <div className="passos">
       {PASSOS.map((passo) => (

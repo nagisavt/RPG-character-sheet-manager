@@ -79,6 +79,9 @@ const Cena = ({ cena }: { cena: string | null }) => {
  * Mesa: quem tem 35 de máximo tem uma barra mais longa que quem tem 22, e o
  * quanto está cheia é o preenchimento dentro dela. Olhando de dois metros dá
  * para ver quem está mal sem ler número nenhum.
+ *
+ * A Vida bônus é uma segunda barra, branca, logo abaixo — e só aparece quando
+ * existe: quem não tem nenhuma não ganha uma faixa vazia para a mesa decifrar.
  */
 const Barra = ({ personagem, maiorDaMesa }: { personagem: Personagem; maiorDaMesa: number }) => (
   <li style={{ width: `${(personagem.vidaMaxima / maiorDaMesa) * 100}%` }}>
@@ -86,6 +89,7 @@ const Barra = ({ personagem, maiorDaMesa }: { personagem: Personagem; maiorDaMes
       <span>{personagem.nome}</span>
       <span>
         {personagem.vida} / {personagem.vidaMaxima}
+        {personagem.vidaBonus > 0 && <em className="bonus">+{personagem.vidaBonus}</em>}
       </span>
     </div>
     <div
@@ -98,5 +102,22 @@ const Barra = ({ personagem, maiorDaMesa }: { personagem: Personagem; maiorDaMes
     >
       <div style={{ width: `${(personagem.vida / personagem.vidaMaxima) * 100}%` }} />
     </div>
+
+    {personagem.vidaBonus > 0 && (
+      <div
+        className="barra bonus"
+        role="meter"
+        aria-label={`Vida bônus de ${personagem.nome}`}
+        aria-valuenow={personagem.vidaBonus}
+        aria-valuemin={0}
+        aria-valuemax={personagem.vidaMaxima}
+      >
+        <div
+          style={{
+            width: `${Math.min(personagem.vidaBonus / personagem.vidaMaxima, 1) * 100}%`,
+          }}
+        />
+      </div>
+    )}
   </li>
 );

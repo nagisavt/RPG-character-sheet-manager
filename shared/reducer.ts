@@ -30,7 +30,29 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
         ...estado,
         personagens: {
           ...estado.personagens,
-          [evento.personagem]: { ...personagem, vida: evento.vida },
+          [evento.personagem]: {
+            ...personagem,
+            vida: evento.vida,
+            // Um `VidaAlterada` gravado antes de a Vida bônus existir não tem o
+            // segundo pote, e vai continuar não tendo: o Log não se reescreve.
+            // Um Evento que não fala de um pote não mexe nele.
+            vidaBonus: evento.vidaBonus ?? personagem.vidaBonus,
+          },
+        },
+      };
+    }
+
+    case "VidaBonusConcedida": {
+      const personagem = estado.personagens[evento.personagem];
+      if (personagem === undefined) return estado;
+
+      // Substitui o valor anterior. Somar seria o app decidindo que dois efeitos
+      // se empilham, que é regra de mesa e não é dele (ADR-0001).
+      return {
+        ...estado,
+        personagens: {
+          ...estado.personagens,
+          [evento.personagem]: { ...personagem, vidaBonus: evento.vidaBonus },
         },
       };
     }

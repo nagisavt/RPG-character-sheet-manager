@@ -11,6 +11,8 @@ export type Comando =
   | { tipo: "finalizarSessao" }
   /** `diferenca` é assinada: negativa é dano, positiva é cura. Quem resolve o teto é o decisor. */
   | { tipo: "alterarVida"; personagem: PersonagemId; diferenca: number }
+  /** `vidaBonus` é o total depois do Comando, não o quanto acrescentar: ele substitui. */
+  | { tipo: "concederVidaBonus"; personagem: PersonagemId; vidaBonus: number }
   /** O nome do arquivo em `assets/cenas/`, sem extensão e sem caminho. */
   | { tipo: "trocarCena"; cena: string };
 

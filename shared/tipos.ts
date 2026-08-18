@@ -15,13 +15,14 @@ export type Autor = { tipo: "mestre" } | { tipo: "jogador"; personagem: Personag
 export type Audiencia = "publico" | "mestre" | { privado: PersonagemId };
 
 /**
- * O que aconteceu, com os campos que só aquele Evento tem. Moedas, Cena e
- * Combate entram nas issues seguintes, cada um como mais um caso daqui.
+ * O que aconteceu, com os campos que só aquele Evento tem. Moedas e Combate
+ * entram nas issues seguintes, cada um como mais um caso daqui.
  */
 export type Corpo =
   | { tipo: "SessaoIniciada" }
   | { tipo: "SessaoFinalizada" }
   | VidaAlterada
+  | VidaBonusConcedida
   | CenaTrocada;
 
 /**
@@ -49,6 +50,22 @@ export type VidaAlterada = {
   personagem: PersonagemId;
   declarado: number;
   vida: number;
+  /** Onde o outro pote ficou: um dano come a Vida bônus antes de encostar na vida. */
+  vidaBonus: number;
+};
+
+/**
+ * O mestre concedeu Vida bônus. O valor **substitui** o anterior, e por isso
+ * não há diferença e resultado separados como no `VidaAlterada`: o que a mesa
+ * declarou já é onde o pote ficou. Somar dois efeitos ou trocar um pelo outro é
+ * decisão do mestre, que declara o total — o app não soma por conta (ADR-0001).
+ *
+ * Conceder zero é tirar: o efeito acabou.
+ */
+export type VidaBonusConcedida = {
+  tipo: "VidaBonusConcedida";
+  personagem: PersonagemId;
+  vidaBonus: number;
 };
 
 /**
@@ -81,7 +98,7 @@ export type Estado = {
   cena: string | null;
 };
 
-/** Vida bônus e Moedas entram aqui nas issues que as trazem. */
+/** Moedas entram aqui na issue que as traz. */
 export type Personagem = {
   id: PersonagemId;
   nome: string;
@@ -89,4 +106,9 @@ export type Personagem = {
   vida: number;
   /** Cópia do que a Ficha dizia na subida. Nenhum Evento depende dela para ser lido (ADR-0003). */
   vidaMaxima: number;
+  /**
+   * O segundo pote. Não vem da Ficha e não tem teto: nasce de um
+   * `VidaBonusConcedida` e é gasto pelo dano antes da vida.
+   */
+  vidaBonus: number;
 };

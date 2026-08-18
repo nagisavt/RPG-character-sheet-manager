@@ -49,6 +49,12 @@ export const VERBETES: readonly Verbete[] = [
     descricao: "Devolve vida, até o máximo da Ficha. O que passar do teto fica registrado.",
     exemplo: "/cura thorin 5",
   },
+  {
+    uso: "/bonus <personagem> <quantidade>",
+    descricao:
+      "Concede Vida bônus. Substitui o valor de antes em vez de somar, e o dano come dela primeiro. Zero tira.",
+    exemplo: "/bonus thorin 10",
+  },
 ];
 
 const AJUDA = VERBETES.map((verbete) => verbete.uso).join(", ");
@@ -73,8 +79,27 @@ export const lerLinha = (linha: string): Leitura => {
     }
 
     case "/dano":
-    case "/cura":
-      return lerVida(verbo, argumentos);
+    case "/cura": {
+      const leitura = lerAlvo(verbo, argumentos);
+      if ("erro" in leitura) return leitura;
+      // O sinal vem do verbo, nunca do número: `/dano thorin -8` é erro de
+      // digitação do mestre, e curar por engano quem devia levar dano é o tipo
+      // de coisa que só se descobre três turnos depois.
+      const diferenca = verbo === "/dano" ? -leitura.quantidade : leitura.quantidade;
+      return { comando: { tipo: "alterarVida", personagem: leitura.personagem, diferenca } };
+    }
+
+    case "/bonus": {
+      const leitura = lerAlvo(verbo, argumentos);
+      if ("erro" in leitura) return leitura;
+      return {
+        comando: {
+          tipo: "concederVidaBonus",
+          personagem: leitura.personagem,
+          vidaBonus: leitura.quantidade,
+        },
+      };
+    }
 
     default:
       return { erro: `Não conheço '${verbo}'. Conheço: ${AJUDA}` };
@@ -82,11 +107,15 @@ export const lerLinha = (linha: string): Leitura => {
 };
 
 /**
- * O sinal vem do verbo, nunca do número: `/dano thorin -8` é um erro de digitação
- * do mestre, e curar por engano quem devia levar dano é o tipo de coisa que só se
- * descobre três turnos depois.
+ * `<personagem> <quantidade>`, a forma dos três Comandos que mexem em número.
+ *
+ * A quantidade vai **sem sinal**: quem diz para que lado é o verbo. Um `-8`
+ * aceito aqui viraria um `/dano` que cura, e um Log não se apaga.
  */
-const lerVida = (verbo: "/dano" | "/cura", argumentos: readonly string[]): Leitura => {
+const lerAlvo = (
+  verbo: string,
+  argumentos: readonly string[],
+): { personagem: string; quantidade: number } | { erro: string } => {
   const [personagem, quantidade, ...sobra] = argumentos;
 
   if (personagem === undefined || quantidade === undefined || sobra.length > 0) {
@@ -98,11 +127,5 @@ const lerVida = (verbo: "/dano" | "/cura", argumentos: readonly string[]): Leitu
     return { erro: `'${quantidade}' não é uma quantidade: escreva um inteiro, sem sinal` };
   }
 
-  return {
-    comando: {
-      tipo: "alterarVida",
-      personagem,
-      diferenca: verbo === "/dano" ? -numero : numero,
-    },
-  };
+  return { personagem, quantidade: numero };
 };

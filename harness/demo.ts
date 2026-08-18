@@ -31,7 +31,11 @@ console.log(`  no Catálogo: ${catalogoDeExemplo.map((entrada) => entrada.chave)
 
 const vidas = () =>
   Object.values(tv.estado.personagens)
-    .map((personagem) => `${personagem.nome} ${personagem.vida}/${personagem.vidaMaxima}`)
+    .map(
+      (personagem) =>
+        `${personagem.nome} ${personagem.vida}/${personagem.vidaMaxima}` +
+        (personagem.vidaBonus > 0 ? ` (+${personagem.vidaBonus} bônus)` : ""),
+    )
     .join(", ");
 
 /** Devolve `false` quando é hora de fechar a Mesa. */

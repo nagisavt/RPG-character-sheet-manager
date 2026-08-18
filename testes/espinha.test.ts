@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { catalogoDeExemplo, misselMagico } from "../harness/catalogo-exemplo.js";
@@ -5,9 +8,14 @@ import { criarMesa, type Mesa } from "../harness/criar-mesa.js";
 import { elara, fichasDeExemplo, thorin } from "../harness/fichas-exemplo.js";
 
 let mesa: Mesa;
+/** Só o teste do Log escrito por um servidor antigo precisa de um caminho próprio. */
+let pastaDoLog: string | null = null;
 
 afterEach(async () => {
   await mesa?.encerrar();
+  // Depois do `encerrar`: no Windows não se apaga um SQLite ainda aberto.
+  if (pastaDoLog !== null) await rm(pastaDoLog, { recursive: true, force: true });
+  pastaDoLog = null;
 });
 
 it("uma Sessão iniciada pelo mestre chega na TV", async () => {
@@ -125,6 +133,184 @@ describe("Vida", () => {
 
     expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'alterarVida'" });
     expect(celular.estado.personagens["thorin"]?.vida).toBe(28);
+  });
+});
+
+describe("Vida bônus", () => {
+  it("o mestre concede, e a Vida bônus aparece na TV como um pote à parte", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+
+    // A vida não se mexe: a Vida bônus é o segundo pote, não vida a mais.
+    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 10 });
+    expect(tv.eventos.at(-1)).toMatchObject({
+      tipo: "VidaBonusConcedida",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
+  });
+
+  it("conceder de novo substitui o valor anterior em vez de somar", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 4 });
+
+    // Acumular ou não é decisão do mestre, não do app: ele declara onde ficou.
+    expect(tv.estado.personagens["thorin"]?.vidaBonus).toBe(4);
+  });
+
+  it("o dano consome a Vida bônus antes de encostar na vida", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -6 });
+
+    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 4 });
+  });
+
+  it("o que passa da Vida bônus sai da vida, e o Evento grava os dois potes", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -18 });
+
+    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 20, vidaBonus: 0 });
+    // Um dano só, declarado uma vez, com o resultado dos dois potes (ADR-0003).
+    expect(tv.eventos.at(-1)).toMatchObject({
+      tipo: "VidaAlterada",
+      declarado: -18,
+      vida: 20,
+      vidaBonus: 0,
+    });
+  });
+
+  it("a cura não devolve Vida bônus: só o mestre concede ela", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -14 });
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: 4 });
+
+    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 0 });
+  });
+
+  it("conceder zero tira a Vida bônus que sobrou", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+    const resposta = await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 0,
+    });
+
+    expect(resposta).toEqual({ aceito: true });
+    expect(tv.estado.personagens["thorin"]?.vidaBonus).toBe(0);
+  });
+
+  it("recusa uma Vida bônus negativa, sem gravar nada", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: -3,
+    });
+
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "A Vida bônus precisa ser um inteiro de zero para cima",
+    });
+    expect(mestre.eventos).toEqual([]);
+  });
+
+  it("recusa um personagem que não está nas Fichas", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "gandalf",
+      vidaBonus: 5,
+    });
+
+    expect(resposta).toEqual({ aceito: false, motivo: "Personagem desconhecido: gandalf" });
+    expect(mestre.eventos).toEqual([]);
+  });
+
+  it("o jogador não concede Vida bônus, nem a si mesmo", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    const resposta = await celular.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
+
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Só o mestre pode enviar 'concederVidaBonus'",
+    });
+    expect(celular.estado.personagens["thorin"]?.vidaBonus).toBe(0);
+  });
+
+  it("o celular do jogador vê a própria Vida bônus", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 7 });
+
+    expect(celular.estado.personagens["thorin"]?.vidaBonus).toBe(7);
+  });
+
+  it("não vem da Ficha: a Mesa começa a campanha sem Vida bônus nenhuma", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    expect(tv.estado.personagens["thorin"]?.vidaBonus).toBe(0);
+    expect(tv.estado.personagens["elara"]?.vidaBonus).toBe(0);
+  });
+
+  it("sobrevive ao reinício, porque ela está no Log", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -6 });
+
+    await mesa.reiniciar();
+
+    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 4 });
   });
 });
 
@@ -281,6 +467,29 @@ describe("a linha que o mestre digita", () => {
     expect(mestre.eventos).toEqual([]);
   });
 
+  it("'/bonus thorin 10' concede, e o dano seguinte come dela primeiro", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.digitar("/bonus thorin 10");
+    await mestre.digitar("/dano thorin 6");
+
+    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 4 });
+  });
+
+  it("'/bonus thorin -3' não chega no servidor: a quantidade vai sem sinal", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.digitar("/bonus thorin -3");
+
+    expect(resposta.aceito).toBe(false);
+    expect(mestre.eventos).toEqual([]);
+  });
+
   it("'/iniciar' e '/finalizar' atravessam a Sessão inteira", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
@@ -333,6 +542,7 @@ describe("a Ficha editada entre duas subidas", () => {
       nome: "Thorin",
       vida: 20,
       vidaMaxima: 35,
+      vidaBonus: 0,
     });
   });
 
@@ -430,11 +640,45 @@ describe("o Log", () => {
       nome: "Thorin",
       vida: 28,
       vidaMaxima: 28,
+      vidaBonus: 0,
     });
 
     // E a Mesa continua de onde parou: o Log seguiu, não recomeçou.
     await mestre.enviar({ tipo: "finalizarSessao" });
     expect(tv.estado.sessaoAtiva).toBe(false);
+  });
+
+  it("um Evento escrito antes de a Vida bônus existir continua valendo no replay", async () => {
+    pastaDoLog = await mkdtemp(join(tmpdir(), "mesa-legado-"));
+    mesa = await criarMesa({ fichas: fichasDeExemplo, caminhoDoLog: join(pastaDoLog, "mesa.db") });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+
+    // O Log de dezembro foi escrito por um servidor que não conhecia a Vida
+    // bônus, e um Log não se reescreve: o `VidaAlterada` dele não tem o segundo
+    // pote, e vai continuar não tendo para sempre.
+    const banco = new DatabaseSync(mesa.caminhoDoLog);
+    banco.prepare("INSERT INTO eventos (timestamp, corpo) VALUES (?, ?)").run(
+      new Date().toISOString(),
+      JSON.stringify({
+        tipo: "VidaAlterada",
+        personagem: "thorin",
+        declarado: -8,
+        vida: 20,
+        autor: { tipo: "mestre" },
+        audiencia: ["publico"],
+      }),
+    );
+    banco.close();
+
+    await mesa.reiniciar();
+
+    // Ele diz onde a vida ficou e não diz nada sobre a Vida bônus — então não
+    // mexe nela. Nenhum `undefined` vaza para a barra da TV.
+    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 20, vidaBonus: 10 });
   });
 
   it("é append-only: nada apaga, nada edita", async () => {
