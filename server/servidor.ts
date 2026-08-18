@@ -40,7 +40,13 @@ export type OpcoesDoServidor = {
 
 export type Servidor = {
   porta: number;
-  /** O estado da Mesa, em memória. O SQLite guarda só o Log. */
+  /**
+  * O estado da Mesa, em memória. O SQLite guarda só o Log.
+  *
+  * **Sai sem projeção**, com a Anotação de todo mundo dentro. Quem lê isto é o
+  * processo — o `dev.ts` imprimindo a subida, um teste conferindo —, nunca um
+  * socket: o que sai pela rede sai por `projetar` ou por `podeVer`.
+  */
   readonly estado: Estado;
   log: () => ReturnType<Store["ler"]>;
   /** Quantas entradas o Catálogo tem, por tipo. Zero quer dizer que falta semear. */

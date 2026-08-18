@@ -23,8 +23,8 @@ const alcanca = (alvo: Audiencia, identidade: Identidade): boolean => {
  * O estado como **este** socket tem direito de vê-lo.
  *
  * `podeVer` cuida dos deltas, um a um. Esta função cuida da outra porta por onde
- * o estado sai do servidor: o snapshot, que vai inteiro e de uma vez, na conexão
- * e em toda reconexão. Sem ela, filtrar os Eventos privados não adiantaria nada
+ * o estado **sai pela rede**: o snapshot, que vai inteiro e de uma vez, na
+ * conexão e em toda reconexão. Sem ela, filtrar os Eventos privados não adiantaria nada
  * — o celular que dormisse e acordasse voltaria com o bloco de notas de todo
  * mundo dentro.
  *

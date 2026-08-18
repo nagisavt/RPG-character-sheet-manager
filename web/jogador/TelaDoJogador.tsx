@@ -177,7 +177,7 @@ const Hub = ({
         consultar={consultar}
       />
 
-      <Bloco ref={notas} anotacao={personagem.anotacao} enviar={enviar} />
+      <BlocoDeNotas ref={notas} anotacao={personagem.anotacao} enviar={enviar} />
     </main>
   );
 };
@@ -273,14 +273,15 @@ const Prateleira = ({
 };
 
 /**
- * O bloco de notas. Privado de verdade: o que se escreve aqui não chega no
- * celular de mais ninguém — não é escondido lá, ele nunca sai do servidor.
+ * O bloco de notas: onde o jogador escreve a Anotação dele. Privada de verdade —
+ * o que se escreve aqui não chega no celular de mais ninguém, e não é escondido
+ * lá: nunca sai do servidor para lá.
  *
  * **Salva no botão, não a cada tecla.** Cada gravada é um Evento num Log que
  * nunca é apagado; salvar enquanto se digita encheria a campanha inteira de
  * versões de meia frase. O botão é o jogador dizendo que terminou de escrever.
  */
-const Bloco = ({
+const BlocoDeNotas = ({
   ref,
   anotacao,
   enviar,
@@ -290,7 +291,19 @@ const Bloco = ({
   enviar: (comando: Comando) => Promise<Resposta>;
 }) => {
   const [rascunho, setRascunho] = useState(anotacao);
+  const [servidor, setServidor] = useState(anotacao);
   const [salvando, setSalvando] = useState(false);
+  const [recusa, setRecusa] = useState<string | null>(null);
+
+  // A Anotação mudou no servidor — o mesmo jogador salvou de outro aparelho, ou
+  // um snapshot de reconexão chegou. O rascunho só é substituído se ninguém
+  // tiver mexido nele: quem está escrevendo agora não perde o que digitou, e
+  // quem não está para de ver "não salvo" num texto que está salvo — e de
+  // sobrescrever o texto mais novo do servidor ao salvar por cima.
+  if (anotacao !== servidor) {
+    setServidor(anotacao);
+    if (rascunho === servidor) setRascunho(anotacao);
+  }
 
   const salvo = rascunho === anotacao;
 
@@ -304,13 +317,18 @@ const Bloco = ({
         aria-label="Bloco de notas"
         rows={12}
       />
-      <div className="salvar">
-        <span className="apagado">{salvo ? "salvo" : "não salvo"}</span>
+      <div className="salvamento">
+        <span className={recusa === null ? "apagado" : "resposta recusada"}>
+          {recusa ?? (salvo ? "salvo" : "não salvo")}
+        </span>
         <button
           disabled={salvo || salvando}
           onClick={async () => {
             setSalvando(true);
-            await enviar({ tipo: "atualizarAnotacao", texto: rascunho });
+            const resposta = await enviar({ tipo: "atualizarAnotacao", texto: rascunho });
+            // Uma recusa some da tela sem isto, e o jogador fica achando que
+            // escreveu no Log uma coisa que não entrou nele.
+            setRecusa(resposta.aceito ? null : resposta.motivo);
             setSalvando(false);
           }}
         >

@@ -11,26 +11,28 @@ import type { Identidade } from "../shared/identidade.js";
  * porque o decisor recebe o autor do socket e o Comando não tem onde carregar
  * outro. Não há como escrever um Comando de jogador sobre um terceiro.
  */
-const QUEM_PODE: Record<TipoDeComando, Identidade["como"][]> = {
-  iniciarSessao: ["mestre"],
-  finalizarSessao: ["mestre"],
+const QUEM_PODE: Record<TipoDeComando, Identidade["como"]> = {
+  iniciarSessao: "mestre",
+  finalizarSessao: "mestre",
   // Vida é do mestre, inclusive a do próprio jogador: quem declara o que
   // aconteceu na mesa é ele.
-  alterarVida: ["mestre"],
-  concederVidaBonus: ["mestre"],
-  trocarCena: ["mestre"],
+  alterarVida: "mestre",
+  concederVidaBonus: "mestre",
+  trocarCena: "mestre",
   // O bloco de notas é do jogador, e o mestre não escreve nele: ele lê tudo na
   // tela de Log, que é outra coisa.
-  atualizarAnotacao: ["jogador"],
+  atualizarAnotacao: "jogador",
 };
 
 export const autorizar = (identidade: Identidade, tipo: TipoDeComando): Resposta => {
   if (identidade.como === "mesa") {
     return { aceito: false, motivo: "A tela da Mesa só lê: ela não envia Comandos" };
   }
-  const podem = QUEM_PODE[tipo];
-  if (!podem.includes(identidade.como)) {
-    return { aceito: false, motivo: `Só o ${podem.join(" ou o ")} pode enviar '${tipo}'` };
+  // Um papel por Comando, e não uma lista: hoje toda linha da tabela tem um só,
+  // e uma lista seria a forma prometendo um caso que não existe.
+  const quem = QUEM_PODE[tipo];
+  if (identidade.como !== quem) {
+    return { aceito: false, motivo: `Só o ${quem} pode enviar '${tipo}'` };
   }
   return { aceito: true };
 };

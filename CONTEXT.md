@@ -56,6 +56,10 @@ _Avoid_: vida temporária, pontos temporários, escudo
 O dinheiro de um personagem, guardado como um número só. Não existe denominação: converter prata em ouro acontece na cabeça do mestre, antes de registrar.
 _Avoid_: PO, ouro, dinheiro, tesouro
 
+**Anotação**:
+O bloco de notas de um jogador, escrito por ele no celular e privado de verdade: o Evento nasce com audiência `privado:<personagem>` e nunca sai do servidor para mais ninguém. O mestre lê tudo. É um texto só, guardado inteiro a cada gravada — não um diff, e não uma lista de notas.
+_Avoid_: nota, comentário, diário (rascunho é outra coisa: o que está digitado na tela e ainda não foi salvo)
+
 **Catálogo**:
 Os dados de regra do SRD — magias, itens, monstros. Somente leitura, iguais para qualquer mesa, e nunca entram no Log.
 _Avoid_: compêndio, biblioteca, referência
