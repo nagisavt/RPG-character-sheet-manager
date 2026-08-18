@@ -1,3 +1,4 @@
+import { ehD20 } from "../shared/combate.js";
 import type { Comando } from "../shared/comandos.js";
 import type {
   Autor,
@@ -148,17 +149,16 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
         return { recusa: `Personagem desconhecido: ${autor.personagem}` };
       }
 
-      return iniciativa(
-        estado,
-        { tipo: "personagem", personagem: autor.personagem },
-        comando.d20,
+      return iniciativa(estado, {
+        participante: { tipo: "personagem", personagem: autor.personagem },
+        d20: comando.d20,
         // O bônus sai da Ficha, pelo estado, e nunca do que o cliente mandou.
-        personagem.bonusDeIniciativa,
+        bonus: personagem.bonusDeIniciativa,
         autor,
         // O dono vê a própria rolagem confirmada; o mestre vê todas por ser o
         // mestre. A Mesa não vê número nenhum — ela vê nomes em ordem.
-        [{ privado: autor.personagem }],
-      );
+        tambemVeem: [{ privado: autor.personagem }],
+      });
     }
 
     case "declararIniciativaDoMonstro": {
@@ -167,15 +167,14 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
         return { recusa: `Monstro não declarado: ${comando.nome}` };
       }
 
-      return iniciativa(
-        estado,
-        { tipo: "monstro", nome: monstro.nome },
-        comando.d20,
-        monstro.bonusDeIniciativa,
+      return iniciativa(estado, {
+        participante: { tipo: "monstro", nome: monstro.nome },
+        d20: comando.d20,
+        bonus: monstro.bonusDeIniciativa,
         autor,
         // Só o mestre: o d20 do Monstro é o que ele rolou atrás do biombo.
-        [],
-      );
+        tambemVeem: [],
+      });
     }
 
     case "atualizarAnotacao": {
@@ -238,18 +237,22 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
  */
 const iniciativa = (
   estado: Estado,
-  participante: Participante,
-  d20: number,
-  bonus: number,
-  autor: Autor,
-  audiencia: EventoNovo["audiencia"],
+  {
+    participante,
+    d20,
+    bonus,
+    autor,
+    tambemVeem,
+  }: {
+    participante: Participante;
+    d20: number;
+    bonus: number;
+    autor: Autor;
+    tambemVeem: EventoNovo["audiencia"];
+  },
 ): Decisao => {
   if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
-  // Um d20 é um d20. Vinte e três não foi rolado num dado, foi digitado errado —
-  // e o Log é append-only, então não dá para corrigir depois.
-  if (!Number.isInteger(d20) || d20 < 1 || d20 > 20) {
-    return { recusa: "O d20 é um inteiro de 1 a 20" };
-  }
+  if (!ehD20(d20)) return { recusa: "O d20 é um inteiro de 1 a 20" };
 
   return {
     eventos: [
@@ -259,7 +262,7 @@ const iniciativa = (
         d20,
         resultado: d20 + bonus,
         autor,
-        audiencia: ["mestre", ...audiencia],
+        audiencia: ["mestre", ...tambemVeem],
       },
     ],
   };

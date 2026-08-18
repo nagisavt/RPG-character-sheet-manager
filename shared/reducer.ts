@@ -1,11 +1,5 @@
-import type {
-  Combate,
-  Estado,
-  EventoNovo,
-  Participante,
-  Personagem,
-  PersonagemId,
-} from "./tipos.js";
+import { mesmo } from "./combate.js";
+import type { Combate, Estado, EventoNovo, Personagem, PersonagemId } from "./tipos.js";
 
 /**
  * `reducer(estado, evento) => estado`. Puro: sem banco, sem socket, sem relógio
@@ -72,12 +66,6 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
       return comPersonagem(estado, evento.personagem, () => ({ anotacao: evento.texto }));
   }
 };
-
-/** Dois Participantes são o mesmo quando são do mesmo tipo e do mesmo nome. */
-export const mesmo = (um: Participante, outro: Participante): boolean =>
-  um.tipo === "personagem" && outro.tipo === "personagem"
-    ? um.personagem === outro.personagem
-    : um.tipo === "monstro" && outro.tipo === "monstro" && um.nome === outro.nome;
 
 /**
  * O Combate trocado. Um Evento de Combate que chega fora dele passa batido, do

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode, type Ref } from "react";
 import type { Consulta, Entrada, TipoDoCatalogo } from "../../shared/catalogo.js";
 import type { Comando, Resposta } from "../../shared/comandos.js";
+import { mesmo } from "../../shared/combate.js";
 import type { Combate, Ficha, Personagem, PersonagemId } from "../../shared/tipos.js";
 import { BarraDeVida, ImagemOuRotulo, Moedas, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
@@ -218,9 +219,8 @@ const Iniciativa = ({
   const [recusa, setRecusa] = useState<string | null>(null);
 
   const minha =
-    combate?.iniciativas.find(
-      (qual) =>
-        qual.participante.tipo === "personagem" && qual.participante.personagem === personagem.id,
+    combate?.iniciativas.find((qual) =>
+      mesmo(qual.participante, { tipo: "personagem", personagem: personagem.id }),
     ) ?? null;
 
   const esperando = combate !== null && minha === null;
@@ -231,11 +231,18 @@ const Iniciativa = ({
     if (esperando) popup.current?.showModal();
   }, [esperando]);
 
+  const abrir = () => {
+    // A recusa de antes some ao reabrir: ela era sobre o que foi digitado
+    // naquela vez, e ficar na tela faria o mestre achar que falhou de novo.
+    setRecusa(null);
+    popup.current?.showModal();
+  };
+
   if (combate === null) return null;
 
   return (
     <>
-      <button className="faixa" onClick={() => popup.current?.showModal()}>
+      <button className="faixa" onClick={abrir}>
         {minha === null ? (
           "Declare sua iniciativa"
         ) : (

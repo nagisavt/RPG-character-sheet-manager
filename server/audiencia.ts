@@ -1,3 +1,4 @@
+import { mesmo } from "../shared/combate.js";
 import type { Identidade } from "../shared/identidade.js";
 import type { Audiencia, Estado, EventoNovo, Personagem } from "../shared/tipos.js";
 
@@ -48,7 +49,7 @@ export const projetar = (estado: Estado, identidade: Identidade): Estado => {
             ...estado.combate,
             iniciativas: estado.combate.iniciativas.filter(
               (qual) =>
-                qual.participante.tipo === "personagem" && qual.participante.personagem === meu,
+                meu !== null && mesmo(qual.participante, { tipo: "personagem", personagem: meu }),
             ),
           },
     personagens: Object.fromEntries(

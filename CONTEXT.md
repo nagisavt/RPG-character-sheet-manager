@@ -29,7 +29,7 @@ Quem pode ver um Evento: `publico`, `privado:<personagem>` ou `mestre`. O servid
 _Avoid_: visibilidade, permissão, escopo
 
 **Combate**:
-O modo em que a Mesa entra quando o mestre declara os monstros, e do qual só sai quando o mestre encerra. Enquanto dura, a TV mostra a Fila de iniciativa no lugar da cena.
+O modo em que a Mesa entra quando o mestre o inicia, e do qual só sai quando ele encerra. Ele começa vazio: os Monstros e as iniciativas entram depois, cada um no seu Evento. Enquanto dura, a TV mostra a Fila de iniciativa no lugar da cena.
 _Avoid_: encontro, batalha, luta
 
 **Participante**:

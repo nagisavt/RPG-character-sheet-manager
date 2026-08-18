@@ -1,3 +1,4 @@
+import { ehD20 } from "./combate.js";
 import type { Comando } from "./comandos.js";
 
 /**
@@ -105,9 +106,7 @@ export const lerLinha = (linha: string): Leitura => {
       const nome = argumentos.slice(0, -1).join(" ");
 
       if (nome === "") return { erro: "Escreva '/iniciativa <monstro> <d20>'" };
-      if (!Number.isInteger(d20) || d20 < 1 || d20 > 20) {
-        return { erro: `'${ultimo}' não é um d20: escreva um inteiro de 1 a 20` };
-      }
+      if (!ehD20(d20)) return { erro: `'${ultimo}' não é um d20: escreva um inteiro de 1 a 20` };
 
       return { comando: { tipo: "declararIniciativaDoMonstro", nome, d20 } };
     }

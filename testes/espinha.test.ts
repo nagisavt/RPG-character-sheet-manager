@@ -475,18 +475,16 @@ describe("Combate", () => {
     await mestre.enviar({ tipo: "declararMonstros", monstros: goblins });
 
     const combate = () => mestre.estado.combate!;
-    expect(faltam(mestre.estado, combate()).map((quem) => nomeDe(mestre.estado, quem))).toEqual([
-      "Thorin",
-      "Elara",
-      "Goblin arqueiro",
-    ]);
+    expect(
+      faltam(mestre.estado, combate()).map((quem) => nomeDe(mestre.estado, combate(), quem)),
+    ).toEqual(["Thorin", "Elara", "Goblin arqueiro ×3"]);
 
     await dela.enviar({ tipo: "declararIniciativa", d20: 14 });
     await dele.enviar({ tipo: "declararIniciativa", d20: 8 });
 
-    expect(faltam(mestre.estado, combate()).map((quem) => nomeDe(mestre.estado, quem))).toEqual([
-      "Goblin arqueiro",
-    ]);
+    expect(
+      faltam(mestre.estado, combate()).map((quem) => nomeDe(mestre.estado, combate(), quem)),
+    ).toEqual(["Goblin arqueiro ×3"]);
 
     await mestre.enviar({ tipo: "declararIniciativaDoMonstro", nome: "Goblin arqueiro", d20: 11 });
 

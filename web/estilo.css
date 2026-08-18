@@ -619,3 +619,14 @@ span.voltar {
 .faixa strong {
   font-variant-numeric: tabular-nums;
 }
+
+.declarado {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.declarado button {
+  min-height: 2.25rem;
+  font-size: 0.8125rem;
+}
