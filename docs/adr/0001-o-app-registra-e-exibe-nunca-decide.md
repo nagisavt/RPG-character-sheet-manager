@@ -17,11 +17,13 @@ Esta lista é fechada. Ela é curta de propósito, e crescer nela é uma decisã
 
 - Somar o bônus de iniciativa no d20 que foi digitado.
 - Limitar a cura na vida máxima — vida atual acima da máxima é um estado que não existe.
+- Limitar o dano em zero — vida negativa também é um estado que não existe. Em D&D você cai a zero e começa a rolar contra a morte; o excedente não é guardado em lugar nenhum, e quanto passou disso é assunto da mesa, não do app.
 - Distribuir um dano já declarado: consome a vida bônus primeiro, o que sobrar sai da vida.
 
 ## Consequências
 
 - `/dano thorin 8` registra oito. Não descobre oito, mas divide os oito entre os dois potes de vida.
+- O Evento guarda a diferença declarada inteira mesmo quando parte dela se perde num dos dois limites: `Thorin: dano 8 (5 → 0)` mostra honestamente que três não tinham onde cair. Ver [ADR-0003](./0003-o-evento-grava-a-diferenca-e-o-resultado.md).
 - Vida de monstro fica no papel do mestre. O app conhece o monstro só como nome e bônus de iniciativa na Fila.
 - O decisor não tem gerador aleatório, do mesmo jeito que não tem relógio — as duas coisas o tornariam impuro e não-testável.
 

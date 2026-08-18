@@ -9,3 +9,6 @@ dados/
 
 # a senha do mestre. o exemplo (.env.exemplo) e que e versionado
 .env
+
+# build das telas
+web/dist/
