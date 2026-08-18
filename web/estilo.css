@@ -536,3 +536,14 @@ span.voltar {
   gap: 1rem;
   margin-top: 0.75rem;
 }
+
+.moedas {
+  margin: 0.5rem 0 0;
+  color: var(--apagado);
+  font-size: 0.875rem;
+}
+
+.moedas strong {
+  color: var(--letra);
+  font-variant-numeric: tabular-nums;
+}

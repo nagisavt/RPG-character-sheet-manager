@@ -34,6 +34,10 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
       // se empilham, que é regra de mesa e não é dele (ADR-0001).
       return comPersonagem(estado, evento.personagem, () => ({ vidaBonus: evento.vidaBonus }));
 
+    case "MoedasAlteradas":
+      // Atribui, não acumula (ADR-0003), do mesmo jeito que a vida.
+      return comPersonagem(estado, evento.personagem, () => ({ moedas: evento.moedas }));
+
     case "AnotacaoAtualizada":
       // Atribui a Anotação inteira. O cliente que não tinha direito de ver este
       // Evento não chega aqui: ele nunca o recebeu.

@@ -11,6 +11,10 @@ import type { Ficha } from "../shared/tipos.js";
  *
  * O que muda **durante** a sessão não entra aqui: isso é Log.
  *
+ * `moedas` é com quanto o personagem chegou no começo da campanha, num número
+ * só e sem denominação. O que ele ganhou e gastou depois é Log, e editar aqui
+ * não reescreve nada disso.
+ *
  * Inventário, magias e equipado guardam a **chave do Catálogo**. O nome e a
  * descrição saem de lá na hora de exibir: quem digita a Ficha não redigita a
  * regra. Uma chave que o Catálogo não tem aparece como o que ela é — uma chave
@@ -21,6 +25,7 @@ export const fichasDaMesa: readonly Ficha[] = [
     id: "thorin",
     nome: "Thorin",
     vidaMaxima: 28,
+    moedas: 120,
     inventario: [
       { chave: "srd-2024_longsword", quantidade: 1 },
       { chave: "srd-2024_shield", quantidade: 1 },
@@ -40,6 +45,7 @@ export const fichasDaMesa: readonly Ficha[] = [
     id: "elara",
     nome: "Elara",
     vidaMaxima: 22,
+    moedas: 35,
     inventario: [{ chave: "srd-2024_quarterstaff", quantidade: 1 }],
     magias: [
       { chave: "srd-2024_fire-bolt", conhecida: true },

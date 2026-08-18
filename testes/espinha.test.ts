@@ -351,6 +351,140 @@ describe("Catálogo", () => {
   });
 });
 
+describe("Moedas", () => {
+  it("o mestre entrega o tesouro e o celular do jogador vê", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    await mestre.enviar({ tipo: "alterarMoedas", personagem: "thorin", diferenca: 50 });
+
+    expect(celular.estado.personagens["thorin"]?.moedas).toBe(170);
+  });
+
+  it("o Evento grava a diferença declarada e o resultado", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    await mestre.enviar({ tipo: "alterarMoedas", personagem: "thorin", diferenca: -20 });
+
+    expect(mestre.eventos.at(-1)).toMatchObject({
+      tipo: "MoedasAlteradas",
+      personagem: "thorin",
+      declarado: -20,
+      moedas: 100,
+    });
+  });
+
+  it("gastar mais do que tem para em zero, e o Log conta as duas coisas", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    await mestre.enviar({ tipo: "alterarMoedas", personagem: "elara", diferenca: -500 });
+
+    // Não vira uma dívida que o app passaria a carregar (ADR-0001).
+    expect(mestre.estado.personagens["elara"]?.moedas).toBe(0);
+    expect(mestre.eventos.at(-1)).toMatchObject({ declarado: -500, moedas: 0 });
+  });
+
+  it("as Moedas começam no que a Ficha dizia: é com elas que ele chegou", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    expect(tv.estado.personagens["thorin"]?.moedas).toBe(120);
+    expect(tv.estado.personagens["elara"]?.moedas).toBe(35);
+  });
+
+  it("subir as Moedas da Ficha e reiniciar não devolve o que já foi gasto", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "alterarMoedas", personagem: "thorin", diferenca: -20 });
+    expect(tv.estado.personagens["thorin"]?.moedas).toBe(100);
+
+    // O mestre corrige a Ficha: ele tinha 200 no começo da campanha, não 120.
+    await mesa.reiniciar([{ ...thorin, moedas: 200 }, elara]);
+
+    // O gasto de vinte aconteceu, e o Evento diz onde o bolso ficou. Se ele
+    // guardasse só a diferença, o replay teria dado 180 (ADR-0003).
+    expect(tv.estado.personagens["thorin"]?.moedas).toBe(100);
+  });
+
+  it("recusa um personagem que não está nas Fichas, sem gravar nada", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.enviar({
+      tipo: "alterarMoedas",
+      personagem: "gandalf",
+      diferenca: 10,
+    });
+
+    expect(resposta).toEqual({ aceito: false, motivo: "Personagem desconhecido: gandalf" });
+    expect(mestre.eventos).toEqual([]);
+  });
+
+  it("o jogador não mexe no próprio bolso: quem entrega o tesouro é o mestre", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    const resposta = await celular.enviar({
+      tipo: "alterarMoedas",
+      personagem: "thorin",
+      diferenca: 1000,
+    });
+
+    expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'alterarMoedas'" });
+    expect(celular.estado.personagens["thorin"]?.moedas).toBe(120);
+  });
+
+  it("'/ganha' e '/gasta': o sinal vem do verbo, e a quantidade é um número só", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.digitar("/ganha thorin 50");
+    await mestre.digitar("/gasta thorin 30");
+
+    expect(tv.estado.personagens["thorin"]?.moedas).toBe(140);
+  });
+
+  it("'/gasta thorin 2po' não é quantidade: não existe denominação", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.digitar("/gasta thorin 2po");
+
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "'2po' não é uma quantidade: escreva um inteiro, sem sinal",
+    });
+    expect(mestre.eventos).toEqual([]);
+  });
+
+  it("sobrevive ao reinício, porque está no Log", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.digitar("/gasta thorin 20");
+    await mesa.reiniciar();
+
+    expect(tv.estado.personagens["thorin"]?.moedas).toBe(100);
+  });
+});
+
 describe("a Ficha do jogador", () => {
   it("o celular pede a própria Ficha e recebe inventário, magias e equipado", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
@@ -603,6 +737,7 @@ describe("a Ficha editada entre duas subidas", () => {
       vida: 20,
       vidaMaxima: 35,
       vidaBonus: 0,
+      moedas: 120,
       anotacao: "",
     });
   });
@@ -702,6 +837,7 @@ describe("o Log", () => {
       vida: 28,
       vidaMaxima: 28,
       vidaBonus: 0,
+      moedas: 120,
       anotacao: "",
     });
 

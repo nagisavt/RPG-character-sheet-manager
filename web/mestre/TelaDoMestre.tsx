@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent, type Ref } from "react";
 import type { Resposta } from "../../shared/comandos.js";
 import { VERBETES } from "../../shared/linha-de-comando.js";
 import type { Personagem } from "../../shared/tipos.js";
-import { BarraDeVida, Numeros } from "../pecas.js";
+import { BarraDeVida, Moedas, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 
 /**
@@ -121,6 +121,8 @@ const Vida = ({
     </div>
 
     <BarraDeVida personagem={personagem} />
+
+    <Moedas personagem={personagem} />
 
     <div className="passos">
       {PASSOS.map((passo) => (

@@ -23,8 +23,25 @@ export type Corpo =
   | { tipo: "SessaoFinalizada" }
   | VidaAlterada
   | VidaBonusConcedida
+  | MoedasAlteradas
   | AnotacaoAtualizada
   | CenaTrocada;
+
+/**
+ * As Moedas de um personagem mudaram. Grava as duas coisas, como o
+ * `VidaAlterada` (ADR-0003): `declarado` é a diferença que a mesa declarou, e
+ * `moedas` é onde o bolso ficou.
+ *
+ * Um número só, sem denominação. Converter prata em ouro acontece na cabeça do
+ * mestre, antes de ele digitar — um câmbio aqui dentro seria o app decidindo a
+ * economia de um mundo que não é dele (ADR-0001).
+ */
+export type MoedasAlteradas = {
+  tipo: "MoedasAlteradas";
+  personagem: PersonagemId;
+  declarado: number;
+  moedas: number;
+};
 
 /**
  * O bloco de notas de um jogador, como ele ficou. Guarda o **texto inteiro** e
@@ -144,6 +161,8 @@ export type Ficha = {
   nome: string;
   /** Muda entre sessões, ao subir de nível: por isso mora aqui e não no Log (ADR-0002). */
   vidaMaxima: number;
+  /** Quanto o personagem tinha quando a campanha começou. O que ele gasta depois é Log. */
+  moedas: number;
   inventario: readonly ItemDaFicha[];
   magias: readonly MagiaDaFicha[];
   equipado: Equipado;
@@ -170,6 +189,8 @@ export type Personagem = {
    * `VidaBonusConcedida` e é gasto pelo dano antes da vida.
    */
   vidaBonus: number;
+  /** O que o Log diz. Começa no que a Ficha dizia na subida e só se move por `MoedasAlteradas`. */
+  moedas: number;
   /**
    * O bloco de notas dele. Está no estado de todo mundo **no servidor**, e é a
    * projeção por socket que decide quem leva o quê: o dono e o mestre levam o

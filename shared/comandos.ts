@@ -15,6 +15,8 @@ export type Comando =
   | { tipo: "concederVidaBonus"; personagem: PersonagemId; vidaBonus: number }
   /** O nome do arquivo em `assets/cenas/`, sem extensão e sem caminho. */
   | { tipo: "trocarCena"; cena: string }
+  /** `diferenca` é assinada: negativa é gasto, positiva é ganho. Quem para em zero é o decisor. */
+  | { tipo: "alterarMoedas"; personagem: PersonagemId; diferenca: number }
   /**
    * O bloco de notas inteiro, como ele ficou. Não diz de quem é: o personagem
    * sai do socket, e é isso que faz não existir escrever no bloco do colega.

@@ -27,7 +27,11 @@ const personagemDe = (ficha: Ficha) => ({
   // gasta na mesma noite. Começar a campanha com ela seria a Ficha inventando
   // um fato que ninguém declarou.
   vidaBonus: 0,
-  // Vazio pelo mesmo motivo: o que o jogador escreveu é fato da Sessão, e fato
-  // da Sessão é Log. A Ficha é a folha de papel, não o caderno dele.
+  // As Moedas vêm da Ficha pelo mesmo motivo da vida: é com elas que o
+  // personagem chegou no começo da campanha. O que ele gastou depois é fato da
+  // Sessão, e fato da Sessão é Log.
+  moedas: ficha.moedas,
+  // Vazio, e não da Ficha: o que o jogador escreveu é fato da Sessão também. A
+  // Ficha é a folha de papel, não o caderno dele.
   anotacao: "",
 });

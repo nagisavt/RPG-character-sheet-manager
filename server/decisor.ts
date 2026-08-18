@@ -71,6 +71,33 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
       };
     }
 
+    case "alterarMoedas": {
+      const personagem = estado.personagens[comando.personagem];
+      if (personagem === undefined) {
+        return { recusa: `Personagem desconhecido: ${comando.personagem}` };
+      }
+      if (!Number.isInteger(comando.diferenca)) {
+        return { recusa: "A diferença de Moedas precisa ser um número inteiro" };
+      }
+
+      // Para em zero, como o dano (ADR-0001): bolso negativo é um estado que não
+      // existe. O gasto declarado inteiro fica gravado do mesmo jeito.
+      const moedas = Math.max(personagem.moedas + comando.diferenca, 0);
+      return {
+        eventos: [
+          {
+            tipo: "MoedasAlteradas",
+            personagem: comando.personagem,
+            declarado: comando.diferenca,
+            moedas,
+            autor,
+            // Público como a vida: o tesouro é dividido na mesa, em voz alta.
+            audiencia: ["publico"],
+          },
+        ],
+      };
+    }
+
     case "atualizarAnotacao": {
       // O personagem sai do autor, que sai do socket. Um Comando que carregasse
       // o próprio personagem seria um jogador escrevendo no bloco de outro.

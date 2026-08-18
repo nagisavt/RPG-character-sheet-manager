@@ -52,6 +52,17 @@ export const BarraDeVida = ({ personagem }: { personagem: Personagem }) => (
   </>
 );
 
+/**
+ * As Moedas: um número só, sem denominação. Não existe PC, PP, PE, PO nem PL, e
+ * é de propósito — converter prata em ouro acontece na cabeça do mestre, antes
+ * de ele digitar (ADR-0001).
+ */
+export const Moedas = ({ personagem }: { personagem: Personagem }) => (
+  <p className="moedas">
+    Moedas <strong>{personagem.moedas}</strong>
+  </p>
+);
+
 /** `28 / 28 +10`, com a Vida bônus na cor dela. */
 export const Numeros = ({ personagem }: { personagem: Personagem }) => (
   <>

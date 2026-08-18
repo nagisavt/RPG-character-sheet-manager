@@ -50,6 +50,16 @@ export const VERBETES: readonly Verbete[] = [
     exemplo: "/cura thorin 5",
   },
   {
+    uso: "/ganha <personagem> <quantidade>",
+    descricao: "Põe Moedas no bolso. Um número só: a conversão acontece antes, na sua cabeça.",
+    exemplo: "/ganha thorin 50",
+  },
+  {
+    uso: "/gasta <personagem> <quantidade>",
+    descricao: "Tira Moedas. Para em zero, e o Log guarda o que foi declarado.",
+    exemplo: "/gasta thorin 20",
+  },
+  {
     uso: "/bonus <personagem> <quantidade>",
     descricao:
       "Concede Vida bônus. Substitui o valor de antes em vez de somar, e o dano come dela primeiro. Zero tira.",
@@ -86,6 +96,14 @@ export const lerLinha = (linha: string): Leitura => {
       return { comando: { tipo: "alterarVida", personagem: leitura.personagem, diferenca } };
     }
 
+    case "/ganha":
+    case "/gasta": {
+      const leitura = lerAlvoEQuantidade(verbo, argumentos);
+      if ("erro" in leitura) return leitura;
+      const diferenca = verbo === "/gasta" ? -leitura.quantidade : leitura.quantidade;
+      return { comando: { tipo: "alterarMoedas", personagem: leitura.personagem, diferenca } };
+    }
+
     case "/bonus": {
       const leitura = lerAlvoEQuantidade(verbo, argumentos);
       if ("erro" in leitura) return leitura;
@@ -110,7 +128,7 @@ export const lerLinha = (linha: string): Leitura => {
  * aceito aqui viraria um `/dano` que cura, e um Log não se apaga.
  */
 const lerAlvoEQuantidade = (
-  verbo: "/dano" | "/cura" | "/bonus",
+  verbo: "/dano" | "/cura" | "/bonus" | "/ganha" | "/gasta",
   argumentos: readonly string[],
 ): { personagem: string; quantidade: number } | { erro: string } => {
   const [personagem, quantidade, ...sobra] = argumentos;

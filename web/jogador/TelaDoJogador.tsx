@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import type { Consulta, Entrada, TipoDoCatalogo } from "../../shared/catalogo.js";
 import type { Comando, Resposta } from "../../shared/comandos.js";
 import type { Ficha, Personagem, PersonagemId } from "../../shared/tipos.js";
-import { BarraDeVida, ImagemOuRotulo, Numeros } from "../pecas.js";
+import { BarraDeVida, ImagemOuRotulo, Moedas, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 
 /**
@@ -145,6 +145,7 @@ const Hub = ({
             <Numeros personagem={personagem} />
           </p>
           <BarraDeVida personagem={personagem} />
+          <Moedas personagem={personagem} />
         </div>
       </header>
 
