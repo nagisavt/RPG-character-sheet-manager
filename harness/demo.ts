@@ -34,8 +34,7 @@ const vidas = () =>
     .map(
       (personagem) =>
         `${personagem.nome} ${personagem.vida}/${personagem.vidaMaxima}` +
-        (personagem.vidaBonus > 0 ? ` (+${personagem.vidaBonus} bônus)` : "") +
-        ` ${personagem.moedas} moedas`,
+        (personagem.vidaBonus > 0 ? ` (+${personagem.vidaBonus} bônus)` : ""),
     )
     .join(", ");
 

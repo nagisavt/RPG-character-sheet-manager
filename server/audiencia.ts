@@ -1,5 +1,5 @@
 import type { Identidade } from "../shared/identidade.js";
-import type { Audiencia, Estado, EventoNovo } from "../shared/tipos.js";
+import type { Audiencia, Estado, EventoNovo, Personagem } from "../shared/tipos.js";
 
 /**
  * A audiência é **gravada** no Evento, não calculada no broadcast: a
@@ -29,7 +29,7 @@ const alcanca = (alvo: Audiencia, identidade: Identidade): boolean => {
  * mundo dentro.
  *
  * O que se apaga aqui é o conteúdo, não o campo: uma tela que recebesse um
- * `Personagem` sem `anotacao` teria que adivinhar se é vazio ou se é sigilo.
+ * `Personagem` sem os campos teria que adivinhar se está vazio ou se é sigilo.
  */
 export const projetar = (estado: Estado, identidade: Identidade): Estado => {
   // O mestre não filtra nada, do mesmo jeito que na tela de Log dele.
@@ -42,8 +42,20 @@ export const projetar = (estado: Estado, identidade: Identidade): Estado => {
     personagens: Object.fromEntries(
       Object.entries(estado.personagens).map(([id, personagem]) => [
         id,
-        id === meu ? personagem : { ...personagem, anotacao: "" },
+        id === meu ? personagem : semOSigilo(personagem),
       ]),
     ),
   };
 };
+
+/**
+ * O personagem como o resto da mesa o vê: sem a Anotação e sem as Moedas.
+ *
+ * A vida fica: ela está na TV, em barra, para a mesa inteira. O que sai daqui é
+ * o que só o dono tem direito de saber.
+ */
+const semOSigilo = (personagem: Personagem): Personagem => ({
+  ...personagem,
+  anotacao: "",
+  moedas: null,
+});

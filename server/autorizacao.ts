@@ -19,7 +19,7 @@ const QUEM_PODE: Record<TipoDeComando, Identidade["como"]> = {
   alterarVida: "mestre",
   concederVidaBonus: "mestre",
   // As Moedas são do mestre pelo mesmo motivo da vida: quem declara o que
-  // aconteceu na mesa é ele, e o tesouro foi achado na mesa.
+  // aconteceu na mesa é ele. O jogador lê o próprio bolso, e só.
   alterarMoedas: "mestre",
   trocarCena: "mestre",
   // O bloco de notas é do jogador, e o mestre não escreve nele: ele lê tudo na

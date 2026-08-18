@@ -57,11 +57,16 @@ export const BarraDeVida = ({ personagem }: { personagem: Personagem }) => (
  * é de propósito — converter prata em ouro acontece na cabeça do mestre, antes
  * de ele digitar (ADR-0001).
  */
-export const Moedas = ({ personagem }: { personagem: Personagem }) => (
-  <p className="moedas">
-    Moedas <strong>{personagem.moedas}</strong>
-  </p>
-);
+export const Moedas = ({ personagem }: { personagem: Personagem }) => {
+  // Este socket não tem direito de saber. Não é escondido aqui — não chegou.
+  if (personagem.moedas === null) return null;
+
+  return (
+    <p className="moedas">
+      Moedas <strong>{personagem.moedas}</strong>
+    </p>
+  );
+};
 
 /** `28 / 28 +10`, com a Vida bônus na cor dela. */
 export const Numeros = ({ personagem }: { personagem: Personagem }) => (

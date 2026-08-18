@@ -15,8 +15,8 @@ export type Autor = { tipo: "mestre" } | { tipo: "jogador"; personagem: Personag
 export type Audiencia = "publico" | "mestre" | { privado: PersonagemId };
 
 /**
- * O que aconteceu, com os campos que só aquele Evento tem. Moedas e Combate
- * entram nas issues seguintes, cada um como mais um caso daqui.
+ * O que aconteceu, com os campos que só aquele Evento tem. O Combate entra na
+ * issue seguinte, como mais um caso daqui.
  */
 export type Corpo =
   | { tipo: "SessaoIniciada" }
@@ -35,6 +35,9 @@ export type Corpo =
  * Um número só, sem denominação. Converter prata em ouro acontece na cabeça do
  * mestre, antes de ele digitar — um câmbio aqui dentro seria o app decidindo a
  * economia de um mundo que não é dele (ADR-0001).
+ *
+ * Nasce com audiência `privado:<personagem>`: o bolso é de quem o carrega, e o
+ * mestre lê tudo por ser o mestre.
  */
 export type MoedasAlteradas = {
   tipo: "MoedasAlteradas";
@@ -189,8 +192,16 @@ export type Personagem = {
    * `VidaBonusConcedida` e é gasto pelo dano antes da vida.
    */
   vidaBonus: number;
-  /** O que o Log diz. Começa no que a Ficha dizia na subida e só se move por `MoedasAlteradas`. */
-  moedas: number;
+  /**
+   * O que o Log diz. Começa no que a Ficha dizia na subida e só se move por
+   * `MoedasAlteradas`.
+   *
+   * `null` quando este socket não tem direito de saber — e `null` e não zero,
+   * porque zero seria o app dizendo que o bolso está vazio, coisa que esta tela
+   * não sabe. O que ela sabe é que não foi contada. Quem decide isso é o
+   * `projetar`, no servidor, e nunca o CSS.
+   */
+  moedas: number | null;
   /**
    * O bloco de notas dele. Está no estado de todo mundo **no servidor**, e é a
    * projeção por socket que decide quem leva o quê: o dono e o mestre levam o

@@ -76,8 +76,17 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
       if (personagem === undefined) {
         return { recusa: `Personagem desconhecido: ${comando.personagem}` };
       }
+      // Mesmo motivo do `alterarVida`: um `NaN` gravado num Log append-only não
+      // tem como ser corrigido depois, e envenena todo replay da campanha.
       if (!Number.isInteger(comando.diferenca)) {
         return { recusa: "A diferença de Moedas precisa ser um número inteiro" };
+      }
+      // `null` é o sigilo da projeção, e o decisor roda no servidor, sobre o
+      // estado inteiro — aqui ele nunca aparece. A guarda existe para que o dia
+      // em que alguém decidir por um Evento a partir de um estado projetado
+      // seja uma recusa alta, e não uma conta feita com o buraco.
+      if (personagem.moedas === null) {
+        return { recusa: "Este estado não conhece as Moedas deste personagem" };
       }
 
       // Para em zero, como o dano (ADR-0001): bolso negativo é um estado que não
@@ -91,8 +100,11 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
             declarado: comando.diferenca,
             moedas,
             autor,
-            // Público como a vida: o tesouro é dividido na mesa, em voz alta.
-            audiencia: ["publico"],
+            // O bolso é de quem o carrega. A vida é pública porque está na TV,
+            // em barra; as Moedas não estão em tela nenhuma que a mesa olhe
+            // junto, então não há motivo para elas saírem daqui para os outros.
+            // O mestre lê tudo por ser o mestre, não por estar nesta lista.
+            audiencia: [{ privado: comando.personagem }],
           },
         ],
       };

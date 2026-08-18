@@ -26,7 +26,7 @@ Esta lista é fechada. Ela é curta de propósito, e crescer nela é uma decisã
 - `/dano thorin 8` registra oito. Não descobre oito, mas divide os oito entre os dois potes de vida.
 - O Evento guarda a diferença declarada inteira mesmo quando parte dela se perde num dos dois limites: `Thorin: dano 8 (5 → 0)` mostra honestamente que três não tinham onde cair. Ver [ADR-0003](./0003-o-evento-grava-a-diferenca-e-o-resultado.md).
 - `/gasta thorin 50` em quem tem 30 registra cinquenta e para em zero, e o Evento conta as duas coisas — não vira uma dívida de vinte que o app passaria a carregar.
-- Moedas não tem denominação: não existe PC, PP, PE, PO nem PL, e converter prata em ouro acontece na cabeça do mestre antes de ele digitar. Uma tabela de conversão aqui seria o app decidindo o câmbio de um mundo que não é dele.
+- Converter denominação não está na lista, então o app não converte: `/gasta thorin 2po` é recusado como quantidade inválida, e não lido como dois de ouro. O câmbio é de um mundo que não é dele.
 - Vida de monstro fica no papel do mestre. O app conhece o monstro só como nome e bônus de iniciativa na Fila.
 - O decisor não tem gerador aleatório, do mesmo jeito que não tem relógio — as duas coisas o tornariam impuro e não-testável.
 

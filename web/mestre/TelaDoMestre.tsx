@@ -39,7 +39,7 @@ export const TelaDoMestre = () => {
 
       <ul className="personagens">
         {personagens.map((personagem) => (
-          <Vida
+          <Painel
             key={personagem.id}
             personagem={personagem}
             alterar={async (diferenca) =>
@@ -105,7 +105,9 @@ const Portao = ({
  */
 const PASSOS = [-5, -1, 1, 5] as const;
 
-const Vida = ({
+/** A faixa de um personagem no notebook do mestre: os números, as barras, as
+ * Moedas e os botões que declaram dano e cura. */
+const Painel = ({
   personagem,
   alterar,
 }: {

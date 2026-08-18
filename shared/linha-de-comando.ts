@@ -122,7 +122,7 @@ export const lerLinha = (linha: string): Leitura => {
 };
 
 /**
- * `<personagem> <quantidade>`, a forma dos três Comandos que mexem em número.
+ * `<personagem> <quantidade>`, a forma de todo Comando que mexe em número.
  *
  * A quantidade vai **sem sinal**: quem diz para que lado é o verbo. Um `-8`
  * aceito aqui viraria um `/dano` que cura, e um Log não se apaga.
