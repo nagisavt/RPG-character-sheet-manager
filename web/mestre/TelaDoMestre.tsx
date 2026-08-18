@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent, type Ref } from "react";
 import type { Resposta } from "../../shared/comandos.js";
 import { VERBETES } from "../../shared/linha-de-comando.js";
 import type { Personagem } from "../../shared/tipos.js";
+import { BarraDeVida, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 
 /**
@@ -115,42 +116,11 @@ const Vida = ({
     <div className="nome">
       <strong>{personagem.nome}</strong>
       <span>
-        {personagem.vida} / {personagem.vidaMaxima}
-        {personagem.vidaBonus > 0 && <em className="bonus">+{personagem.vidaBonus}</em>}
+        <Numeros personagem={personagem} />
       </span>
     </div>
 
-    <div
-      className="barra"
-      role="meter"
-      aria-label={`Vida de ${personagem.nome}`}
-      aria-valuenow={personagem.vida}
-      aria-valuemin={0}
-      aria-valuemax={personagem.vidaMaxima}
-    >
-      <div style={{ width: `${(personagem.vida / personagem.vidaMaxima) * 100}%` }} />
-    </div>
-
-    {personagem.vidaBonus > 0 && (
-      <div
-        className="barra bonus"
-        role="meter"
-        aria-label={`Vida bônus de ${personagem.nome}`}
-        aria-valuenow={personagem.vidaBonus}
-        aria-valuemin={0}
-        aria-valuemax={personagem.vidaMaxima}
-      >
-        <div
-          style={{
-            // A Vida bônus não tem teto, mas a barra tem: ela satura na largura
-            // da vida do personagem. Deixar a barra crescer para fora seria
-            // reescalar a fileira inteira da TV por causa de um efeito de uma
-            // noite; quem carrega o valor exato é o `+N` do lado do nome.
-            width: `${Math.min(personagem.vidaBonus / personagem.vidaMaxima, 1) * 100}%`,
-          }}
-        />
-      </div>
-    )}
+    <BarraDeVida personagem={personagem} />
 
     <div className="passos">
       {PASSOS.map((passo) => (

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
-import type { Entrada, TipoDoCatalogo } from "../../shared/catalogo.js";
-import type { Ficha, Personagem } from "../../shared/tipos.js";
+import type { Consulta, Entrada, TipoDoCatalogo } from "../../shared/catalogo.js";
+import type { Ficha, Personagem, PersonagemId } from "../../shared/tipos.js";
+import { BarraDeVida, ImagemOuRotulo, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 
 /**
@@ -18,7 +19,7 @@ import { usarMesa } from "../usar-mesa.js";
  */
 export const TelaDoJogador = () => {
   const { ligacao, entrar, consultar, minhaFicha } = usarMesa();
-  const [escolhido, setEscolhido] = useState<string | null>(null);
+  const [escolhido, setEscolhido] = useState<PersonagemId | null>(null);
   const [ficha, setFicha] = useState<Ficha | null>(null);
 
   // Entra primeiro como a TV entra: sem senha e só lendo. É o que dá a lista de
@@ -32,12 +33,22 @@ export const TelaDoJogador = () => {
     entrar({ como: "jogador", personagem: escolhido });
   }, [escolhido, entrar]);
 
-  const ligado = ligacao.situacao === "na mesa";
+  const { situacao } = ligacao;
 
   useEffect(() => {
-    if (escolhido === null || !ligado) return;
-    void minhaFicha().then(setFicha);
-  }, [escolhido, ligado, minhaFicha]);
+    if (escolhido === null || situacao !== "na mesa") return;
+
+    let vivo = true;
+    void minhaFicha().then((recebida) => {
+      // Duas respostas podem estar no ar ao mesmo tempo: trocar de identidade
+      // refaz o socket, e a primeira volta do socket velho, que ainda era a TV.
+      // A Ficha só entra na tela se for de quem está nela.
+      if (vivo && recebida?.id === escolhido) setFicha(recebida);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [escolhido, situacao, minhaFicha]);
 
   if (ligacao.situacao !== "na mesa") {
     return (
@@ -76,7 +87,7 @@ const Escolha = ({
   escolher,
 }: {
   personagens: readonly Personagem[];
-  escolher: (id: string) => void;
+  escolher: (id: PersonagemId) => void;
 }) => (
   <main className="jogador escolha">
     <h1>Quem é você?</h1>
@@ -84,7 +95,11 @@ const Escolha = ({
       {personagens.map((personagem) => (
         <li key={personagem.id}>
           <button onClick={() => escolher(personagem.id)}>
-            <Retrato caminho={`/personagens/${personagem.id}.png`} rotulo={personagem.nome} />
+            <ImagemOuRotulo
+              className="retrato"
+              caminho={`/personagens/${personagem.id}.png`}
+              rotulo={personagem.nome}
+            />
             <span>{personagem.nome}</span>
           </button>
         </li>
@@ -107,7 +122,7 @@ const Hub = ({
 }: {
   personagem: Personagem;
   ficha: Ficha;
-  consultar: (consulta: { tipo: TipoDoCatalogo; chave: string }) => Promise<Entrada | null>;
+  consultar: (consulta: Consulta) => Promise<Entrada | null>;
 }) => {
   const inventario = useRef<HTMLDialogElement>(null);
   const magias = useRef<HTMLDialogElement>(null);
@@ -116,39 +131,17 @@ const Hub = ({
   return (
     <main className="jogador">
       <header className="eu">
-        <Retrato caminho={`/personagens/${personagem.id}.png`} rotulo={personagem.nome} />
+        <ImagemOuRotulo
+          className="retrato"
+          caminho={`/personagens/${personagem.id}.png`}
+          rotulo={personagem.nome}
+        />
         <div>
           <h1>{personagem.nome}</h1>
           <p className="numeros">
-            {personagem.vida} / {personagem.vidaMaxima}
-            {personagem.vidaBonus > 0 && <em className="bonus">+{personagem.vidaBonus}</em>}
+            <Numeros personagem={personagem} />
           </p>
-          <div
-            className="barra"
-            role="meter"
-            aria-label={`Vida de ${personagem.nome}`}
-            aria-valuenow={personagem.vida}
-            aria-valuemin={0}
-            aria-valuemax={personagem.vidaMaxima}
-          >
-            <div style={{ width: `${(personagem.vida / personagem.vidaMaxima) * 100}%` }} />
-          </div>
-          {personagem.vidaBonus > 0 && (
-            <div
-              className="barra bonus"
-              role="meter"
-              aria-label={`Vida bônus de ${personagem.nome}`}
-              aria-valuenow={personagem.vidaBonus}
-              aria-valuemin={0}
-              aria-valuemax={personagem.vidaMaxima}
-            >
-              <div
-                style={{
-                  width: `${Math.min(personagem.vidaBonus / personagem.vidaMaxima, 1) * 100}%`,
-                }}
-              />
-            </div>
-          )}
+          <BarraDeVida personagem={personagem} />
         </div>
       </header>
 
@@ -164,7 +157,10 @@ const Hub = ({
         tipo="item"
         pasta="itens"
         vazio="Nada no bolso."
-        chaves={ficha.inventario.map((item) => ({ chave: item.chave, quanto: item.quantidade }))}
+        linhas={ficha.inventario.map((item) => ({
+          chave: item.chave,
+          quantidade: item.quantidade,
+        }))}
         consultar={consultar}
       />
 
@@ -174,7 +170,7 @@ const Hub = ({
         tipo="magia"
         pasta="magias"
         vazio="Nenhuma magia nesta Ficha."
-        chaves={ficha.magias.map((magia) => ({ chave: magia.chave, quanto: 1 }))}
+        linhas={ficha.magias.map((magia) => ({ chave: magia.chave, quantidade: 1 }))}
         consultar={consultar}
       />
 
@@ -188,7 +184,8 @@ const Hub = ({
   );
 };
 
-type Pedido = { chave: string; quanto: number };
+/** Uma linha da grade: a chave que o Catálogo responde, e quantas o jogador tem. */
+type LinhaDaPrateleira = { chave: string; quantidade: number };
 
 /**
  * Uma grade de coisas do Catálogo. Tocar num item abre o detalhe **dentro do
@@ -201,7 +198,7 @@ const Prateleira = ({
   tipo,
   pasta,
   vazio,
-  chaves,
+  linhas,
   consultar,
 }: {
   ref: Ref<HTMLDialogElement>;
@@ -209,24 +206,23 @@ const Prateleira = ({
   tipo: TipoDoCatalogo;
   pasta: string;
   vazio: string;
-  chaves: readonly Pedido[];
-  consultar: (consulta: { tipo: TipoDoCatalogo; chave: string }) => Promise<Entrada | null>;
+  linhas: readonly LinhaDaPrateleira[];
+  consultar: (consulta: Consulta) => Promise<Entrada | null>;
 }) => {
   const [entradas, setEntradas] = useState<Map<string, Entrada | null>>(new Map());
   const [aberta, setAberta] = useState<string | null>(null);
 
-  // A dependência é a assinatura e não o array: `chaves` é remontado a cada
+  // A dependência é a assinatura e não o array: `linhas` é remontado a cada
   // render do hub, e depender dele faria o efeito pedir o Catálogo de novo por
   // ter pedido o Catálogo. O que importa é quais chaves são, não qual array é.
-  const assinatura = chaves.map(({ chave }) => chave).join(" ");
+  const assinatura = linhas.map(({ chave }) => chave).join(" ");
 
   useEffect(() => {
     let vivo = true;
     void Promise.all(
-      assinatura
-        .split(" ")
-        .filter((chave) => chave !== "")
-        .map(async (chave) => [chave, await consultar({ tipo, chave })] as const),
+      [...new Set(assinatura.split(" ").filter((chave) => chave !== ""))].map(
+        async (chave) => [chave, await consultar({ tipo, chave })] as const,
+      ),
     ).then((lidas) => {
       // O modal pode ter fechado, ou a Ficha ter trocado, enquanto o Catálogo
       // respondia. Escrever aqui depois disso seria encher a tela de outro.
@@ -241,28 +237,34 @@ const Prateleira = ({
 
   return (
     <Modal ref={ref} titulo={titulo} voltar={aberta === null ? null : () => setAberta(null)}>
-      {chaves.length === 0 && <p className="apagado">{vazio}</p>}
+      {linhas.length === 0 && <p className="apagado">{vazio}</p>}
 
       {aberta !== null ? (
         <article className="detalhe">
-          <Retrato caminho={`/${pasta}/${aberta}.png`} rotulo={detalhe?.nome ?? aberta} />
+          <ImagemOuRotulo
+            className="retrato"
+            caminho={`/${pasta}/${aberta}.png`}
+            rotulo={detalhe?.nome ?? aberta}
+          />
           <h3>{detalhe?.nome ?? aberta}</h3>
           {/* A descrição é do Catálogo, sempre. Uma chave que ele não tem aparece
               como a chave que é — some da tela seria pior do que ficar feio. */}
           <p>{detalhe?.descricao ?? "Esta chave não está no Catálogo."}</p>
-          {detalhe !== null && <Detalhes detalhes={detalhe.detalhes} />}
         </article>
       ) : (
         <ul className="grade">
-          {chaves.map(({ chave, quanto }) => (
-            <li key={chave}>
+          {linhas.map(({ chave, quantidade }, ordem) => (
+            // A mesma chave pode aparecer duas vezes na Ficha — duas pilhas da
+            // mesma corda —, então quem separa as linhas é a ordem, não a chave.
+            <li key={`${ordem}-${chave}`}>
               <button onClick={() => setAberta(chave)}>
-                <Retrato
+                <ImagemOuRotulo
+                  className="retrato"
                   caminho={`/${pasta}/${chave}.png`}
                   rotulo={entradas.get(chave)?.nome ?? chave}
                 />
                 <span>{entradas.get(chave)?.nome ?? chave}</span>
-                {quanto > 1 && <span className="quanto">×{quanto}</span>}
+                {quantidade > 1 && <span className="quanto">×{quantidade}</span>}
               </button>
             </li>
           ))}
@@ -271,19 +273,6 @@ const Prateleira = ({
     </Modal>
   );
 };
-
-const Detalhes = ({ detalhes }: { detalhes: Entrada["detalhes"] }) => (
-  <dl className="detalhes">
-    {Object.entries(detalhes)
-      .filter(([, valor]) => valor !== null && valor !== false && valor !== "")
-      .map(([campo, valor]) => (
-        <div key={campo}>
-          <dt>{campo}</dt>
-          <dd>{valor === true ? "sim" : String(valor)}</dd>
-        </div>
-      ))}
-  </dl>
-);
 
 /**
  * `<dialog>` do próprio navegador: Esc fecha, o foco fica preso dentro e o fundo
@@ -319,24 +308,3 @@ const Modal = ({
     {children}
   </dialog>
 );
-
-/**
- * O asset é pedido pelo caminho desde o dia 1. Enquanto o desenho não chega, o
- * que aparece é o placeholder combinado — retângulo preto com o rótulo em cinza
- * claro — e o dia em que o PNG de verdade entra na pasta, ele some sozinho.
- */
-const Retrato = ({ caminho, rotulo }: { caminho: string; rotulo: string }) => {
-  const [faltando, setFaltando] = useState(false);
-
-  useEffect(() => setFaltando(false), [caminho]);
-
-  return (
-    <span className="retrato">
-      {faltando ? (
-        <span className="rotulo">{rotulo}</span>
-      ) : (
-        <img src={caminho} alt="" onError={() => setFaltando(true)} />
-      )}
-    </span>
-  );
-};

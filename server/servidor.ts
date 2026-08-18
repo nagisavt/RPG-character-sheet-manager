@@ -83,6 +83,11 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
     seguir();
   });
 
+  const fichaDe = (identidade: Identidade): Ficha | null =>
+    identidade.como === "jogador"
+      ? (opcoes.fichas.find((ficha) => ficha.id === identidade.personagem) ?? null)
+      : null;
+
   io.on("connection", (socket) => {
     socket.emit("snapshot", { estado, ate });
     socket.on("comando", (comando, responder) => responder(processar(socket, comando)));
@@ -96,11 +101,6 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
     // amarrado no socket, e é por isso que não existe pedir a Ficha do colega.
     socket.on("minhaFicha", (responder) => responder(fichaDe(socket.data.identidade)));
   });
-
-  const fichaDe = (identidade: Identidade): Ficha | null =>
-    identidade.como === "jogador"
-      ? (opcoes.fichas.find((ficha) => ficha.id === identidade.personagem) ?? null)
-      : null;
 
   const processar = (socket: Socket<never, EventosDoServidor, never, Sessao>, comando: Comando) => {
     const { identidade } = socket.data;

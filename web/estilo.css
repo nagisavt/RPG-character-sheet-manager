@@ -347,8 +347,9 @@ code {
 }
 
 /* Retrato, ícone de item, ícone de magia: o mesmo quadrado em toda a tela. O
-   arquivo é pedido pelo caminho desde o dia 1; enquanto ele é o placeholder
-   preto, o que se lê é o rótulo em cima dele. */
+   arquivo é pedido pelo caminho desde o dia 1, e o placeholder já vem com o
+   retângulo preto e o rótulo escritos dentro dele. O `.rotulo` daqui é para o
+   caso mais raro: o arquivo que não está nem em placeholder. */
 .retrato {
   display: grid;
   place-items: center;

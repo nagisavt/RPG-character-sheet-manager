@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { Personagem } from "../../shared/tipos.js";
+import { BarraDeVida, ImagemOuRotulo, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 
 /**
@@ -50,28 +51,15 @@ export const TelaDaMesa = () => {
  * placeholder combinado. Some sozinho no dia em que o PNG entrar na pasta.
  */
 const Cena = ({ cena }: { cena: string | null }) => {
-  const [faltando, setFaltando] = useState(false);
-
-  // Trocou de Cena: a próxima tem o direito de existir.
-  useEffect(() => setFaltando(false), [cena]);
-
   if (cena === null) {
     return (
-      <div className="cena">
+      <span className="cena">
         <span className="rotulo">sem Cena</span>
-      </div>
+      </span>
     );
   }
 
-  return (
-    <div className="cena">
-      {faltando ? (
-        <span className="rotulo">{cena}</span>
-      ) : (
-        <img src={`/cenas/${cena}.png`} alt="" onError={() => setFaltando(true)} />
-      )}
-    </div>
-  );
+  return <ImagemOuRotulo className="cena" caminho={`/cenas/${cena}.png`} rotulo={cena} />;
 };
 
 /**
@@ -88,40 +76,9 @@ const Barra = ({ personagem, maiorDaMesa }: { personagem: Personagem; maiorDaMes
     <div className="nome">
       <span>{personagem.nome}</span>
       <span>
-        {personagem.vida} / {personagem.vidaMaxima}
-        {personagem.vidaBonus > 0 && <em className="bonus">+{personagem.vidaBonus}</em>}
+        <Numeros personagem={personagem} />
       </span>
     </div>
-    <div
-      className="barra"
-      role="meter"
-      aria-label={`Vida de ${personagem.nome}`}
-      aria-valuenow={personagem.vida}
-      aria-valuemin={0}
-      aria-valuemax={personagem.vidaMaxima}
-    >
-      <div style={{ width: `${(personagem.vida / personagem.vidaMaxima) * 100}%` }} />
-    </div>
-
-    {personagem.vidaBonus > 0 && (
-      <div
-        className="barra bonus"
-        role="meter"
-        aria-label={`Vida bônus de ${personagem.nome}`}
-        aria-valuenow={personagem.vidaBonus}
-        aria-valuemin={0}
-        aria-valuemax={personagem.vidaMaxima}
-      >
-        <div
-          style={{
-            // A Vida bônus não tem teto, mas a barra tem: ela satura na largura
-            // da vida do personagem. Deixar a barra crescer para fora seria
-            // reescalar a fileira inteira da TV por causa de um efeito de uma
-            // noite; quem carrega o valor exato é o `+N` do lado do nome.
-            width: `${Math.min(personagem.vidaBonus / personagem.vidaMaxima, 1) * 100}%`,
-          }}
-        />
-      </div>
-    )}
+    <BarraDeVida personagem={personagem} />
   </li>
 );

@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 import { fichasDaMesa } from "../fichas/mesa.js";
+import { acesos, ALTURA, LARGURA, quebrar } from "./fonte-de-pixel.js";
 
 /**
  * `npm run assets:placeholders`: um PNG preto para cada asset que a Ficha pede.
@@ -14,10 +15,11 @@ import { fichasDaMesa } from "../fichas/mesa.js";
  * que se descobre que ela não cabe. Com eles, o que muda quando a arte chega é
  * o conteúdo do arquivo, não o código.
  *
- * O placeholder é o retângulo preto; o rótulo em cinza claro é desenhado pela
- * tela por cima, que é como a Cena já faz. Escrever texto dentro do PNG pediria
- * uma fonte, e uma fonte é uma dependência para um arquivo que vai ser jogado
- * fora assim que o desenho chegar.
+ * O arquivo é o placeholder combinado inteiro: retângulo preto com o rótulo em
+ * cinza claro escrito dentro. O rótulo mora no PNG e não na tela de propósito —
+ * uma tela que desenhasse o nome por cima da imagem teria que saber quando a
+ * imagem é placeholder e quando é a arte de verdade, e não tem como saber.
+ * Estando dentro do arquivo, ele some no dia em que o desenho entra por cima.
  *
  * Rodar de novo não sobrescreve o que já existe: a arte de verdade entra na
  * pasta com o mesmo nome, e um seed que a apagasse seria um desastre silencioso.
@@ -27,11 +29,54 @@ const RAIZ = dirname(fileURLToPath(import.meta.url));
 /** Quadrado, porque a tela do celular lista tudo em grade. */
 const LADO = { itens: 256, magias: 256, personagens: 512 } as const;
 
-const png = (lado: number): Buffer => {
+/** O cinza claro combinado para o rótulo, o mesmo que a Cena usa na TV. */
+const TINTA = [0x9a, 0xa0, 0xaa] as const;
+
+/** Quantos caracteres cabem numa linha antes de o rótulo virar poeira na tela. */
+const POR_LINHA = 12;
+
+const png = (lado: number, rotulo: string): Buffer => {
   // Uma varredura por linha: o byte 0 na frente é o filtro "nenhum", e o resto
-  // são os pixels em RGB. Preto é zero em todos, então a imagem inteira é zero.
-  const cru = Buffer.alloc(lado * (1 + lado * 3));
-  for (let linha = 0; linha < lado; linha++) cru[linha * (1 + lado * 3)] = 0;
+  // são os pixels em RGB. Preto é zero em todos, então a imagem inteira já
+  // nasce sendo o retângulo preto — o que sobra é acender o rótulo.
+  const porLinha = 1 + lado * 3;
+  const cru = Buffer.alloc(lado * porLinha);
+
+  const acender = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= lado || y >= lado) return;
+    const inicio = y * porLinha + 1 + x * 3;
+    cru[inicio] = TINTA[0];
+    cru[inicio + 1] = TINTA[1];
+    cru[inicio + 2] = TINTA[2];
+  };
+
+  const linhas = quebrar(rotulo, POR_LINHA);
+  const colunas = Math.max(...linhas.map((linha) => linha.length)) * (LARGURA + 1) - 1;
+  // Oito décimos do lado: o rótulo respira em vez de encostar na borda.
+  const escala = Math.max(1, Math.floor((lado * 0.8) / colunas));
+
+  const alturaDoTexto = linhas.length * (ALTURA + 2) * escala - 2 * escala;
+  const topo = Math.floor((lado - alturaDoTexto) / 2);
+
+  linhas.forEach((linha, ordem) => {
+    const larguraDaLinha = (linha.length * (LARGURA + 1) - 1) * escala;
+    const esquerda = Math.floor((lado - larguraDaLinha) / 2);
+    const base = topo + ordem * (ALTURA + 2) * escala;
+
+    [...linha].forEach((caractere, posicao) => {
+      for (const [x, y] of acesos(caractere)) {
+        // Cada pixel da fonte vira um quadrado de `escala` por `escala`.
+        for (let alto = 0; alto < escala; alto++) {
+          for (let largo = 0; largo < escala; largo++) {
+            acender(
+              esquerda + (posicao * (LARGURA + 1) + x) * escala + largo,
+              base + y * escala + alto,
+            );
+          }
+        }
+      }
+    });
+  });
 
   const cabecalho = Buffer.alloc(13);
   cabecalho.writeUInt32BE(lado, 0);
@@ -78,22 +123,27 @@ const crc32 = (dados: Buffer): number => {
  * O que a Mesa pede. Sai das Fichas de verdade: um item que ninguém carrega não
  * precisa de imagem, e um que alguém carrega não pode ficar sem.
  */
-const pedidos = new Map<string, number>();
+const pedidos = new Map<string, { lado: number; rotulo: string }>();
+
+const pedir = (pasta: string, chave: string, lado: number) =>
+  // O rótulo é a própria chave: é o que identifica o arquivo que falta, e é por
+  // ela que se procura o desenho para pôr no lugar.
+  pedidos.set(join(pasta, `${chave}.png`), { lado, rotulo: chave });
 
 for (const ficha of fichasDaMesa) {
-  pedidos.set(join("personagens", `${ficha.id}.png`), LADO.personagens);
-  for (const item of ficha.inventario) pedidos.set(join("itens", `${item.chave}.png`), LADO.itens);
-  for (const magia of ficha.magias) pedidos.set(join("magias", `${magia.chave}.png`), LADO.magias);
+  pedir("personagens", ficha.id, LADO.personagens);
+  for (const item of ficha.inventario) pedir("itens", item.chave, LADO.itens);
+  for (const magia of ficha.magias) pedir("magias", magia.chave, LADO.magias);
 }
 
 let criados = 0;
-for (const [caminho, lado] of pedidos) {
+for (const [caminho, { lado, rotulo }] of pedidos) {
   const destino = join(RAIZ, caminho);
   await mkdir(dirname(destino), { recursive: true });
   // `wx` falha se o arquivo existe: a arte de verdade mora no mesmo caminho, e
   // este script não tem nada que encostar nela.
   try {
-    await writeFile(destino, png(lado), { flag: "wx" });
+    await writeFile(destino, png(lado, rotulo), { flag: "wx" });
     criados++;
     console.log(`  criado  ${caminho}`);
   } catch {
