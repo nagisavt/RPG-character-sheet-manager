@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import type { Consulta, Entrada, TipoDoCatalogo } from "../../shared/catalogo.js";
+import type { Comando, Resposta } from "../../shared/comandos.js";
 import type { Ficha, Personagem, PersonagemId } from "../../shared/tipos.js";
 import { BarraDeVida, ImagemOuRotulo, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
@@ -18,7 +19,7 @@ import { usarMesa } from "../usar-mesa.js";
  * ele edita o arquivo e reinicia (ADR-0002).
  */
 export const TelaDoJogador = () => {
-  const { ligacao, entrar, consultar, minhaFicha } = usarMesa();
+  const { ligacao, entrar, enviar, consultar, minhaFicha } = usarMesa();
   const [escolhido, setEscolhido] = useState<PersonagemId | null>(null);
   const [ficha, setFicha] = useState<Ficha | null>(null);
 
@@ -75,7 +76,7 @@ export const TelaDoJogador = () => {
     );
   }
 
-  return <Hub personagem={personagem} ficha={ficha} consultar={consultar} />;
+  return <Hub personagem={personagem} ficha={ficha} consultar={consultar} enviar={enviar} />;
 };
 
 /**
@@ -119,10 +120,12 @@ const Hub = ({
   personagem,
   ficha,
   consultar,
+  enviar,
 }: {
   personagem: Personagem;
   ficha: Ficha;
   consultar: (consulta: Consulta) => Promise<Entrada | null>;
+  enviar: (comando: Comando) => Promise<Resposta>;
 }) => {
   const inventario = useRef<HTMLDialogElement>(null);
   const magias = useRef<HTMLDialogElement>(null);
@@ -174,12 +177,7 @@ const Hub = ({
         consultar={consultar}
       />
 
-      <Modal ref={notas} titulo="Bloco de notas">
-        <p className="apagado">
-          Escrever aqui é a issue #9. A anotação vai ser privada de verdade — não escondida na
-          tela do outro, mas nunca enviada para ele.
-        </p>
-      </Modal>
+      <Bloco ref={notas} anotacao={personagem.anotacao} enviar={enviar} />
     </main>
   );
 };
@@ -270,6 +268,55 @@ const Prateleira = ({
           ))}
         </ul>
       )}
+    </Modal>
+  );
+};
+
+/**
+ * O bloco de notas. Privado de verdade: o que se escreve aqui não chega no
+ * celular de mais ninguém — não é escondido lá, ele nunca sai do servidor.
+ *
+ * **Salva no botão, não a cada tecla.** Cada gravada é um Evento num Log que
+ * nunca é apagado; salvar enquanto se digita encheria a campanha inteira de
+ * versões de meia frase. O botão é o jogador dizendo que terminou de escrever.
+ */
+const Bloco = ({
+  ref,
+  anotacao,
+  enviar,
+}: {
+  ref: Ref<HTMLDialogElement>;
+  anotacao: string;
+  enviar: (comando: Comando) => Promise<Resposta>;
+}) => {
+  const [rascunho, setRascunho] = useState(anotacao);
+  const [salvando, setSalvando] = useState(false);
+
+  const salvo = rascunho === anotacao;
+
+  return (
+    <Modal ref={ref} titulo="Bloco de notas">
+      <textarea
+        className="bloco"
+        value={rascunho}
+        onChange={(evento) => setRascunho(evento.target.value)}
+        placeholder="o taverneiro mentiu sobre o poço"
+        aria-label="Bloco de notas"
+        rows={12}
+      />
+      <div className="salvar">
+        <span className="apagado">{salvo ? "salvo" : "não salvo"}</span>
+        <button
+          disabled={salvo || salvando}
+          onClick={async () => {
+            setSalvando(true);
+            await enviar({ tipo: "atualizarAnotacao", texto: rascunho });
+            setSalvando(false);
+          }}
+        >
+          {salvando ? "salvando…" : "salvar"}
+        </button>
+      </div>
     </Modal>
   );
 };

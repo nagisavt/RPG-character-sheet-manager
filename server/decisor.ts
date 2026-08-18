@@ -71,6 +71,29 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
       };
     }
 
+    case "atualizarAnotacao": {
+      // O personagem sai do autor, que sai do socket. Um Comando que carregasse
+      // o próprio personagem seria um jogador escrevendo no bloco de outro.
+      if (autor.tipo !== "jogador") {
+        return { recusa: "O bloco de notas é do jogador" };
+      }
+
+      return {
+        eventos: [
+          {
+            tipo: "AnotacaoAtualizada",
+            personagem: autor.personagem,
+            texto: comando.texto,
+            autor,
+            // A audiência é gravada aqui, uma vez, e é o que faz o Evento não
+            // sair do servidor para mais ninguém. O mestre lê tudo por ser o
+            // mestre, não por estar nesta lista.
+            audiencia: [{ privado: autor.personagem }],
+          },
+        ],
+      };
+    }
+
     case "concederVidaBonus": {
       const personagem = estado.personagens[comando.personagem];
       if (personagem === undefined) {

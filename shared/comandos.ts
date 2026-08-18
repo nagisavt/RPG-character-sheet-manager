@@ -14,7 +14,12 @@ export type Comando =
   /** `vidaBonus` é o total depois do Comando, não o quanto acrescentar: ele substitui. */
   | { tipo: "concederVidaBonus"; personagem: PersonagemId; vidaBonus: number }
   /** O nome do arquivo em `assets/cenas/`, sem extensão e sem caminho. */
-  | { tipo: "trocarCena"; cena: string };
+  | { tipo: "trocarCena"; cena: string }
+  /**
+   * O bloco de notas inteiro, como ele ficou. Não diz de quem é: o personagem
+   * sai do socket, e é isso que faz não existir escrever no bloco do colega.
+   */
+  | { tipo: "atualizarAnotacao"; texto: string };
 
 export type TipoDeComando = Comando["tipo"];
 

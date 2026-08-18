@@ -603,6 +603,7 @@ describe("a Ficha editada entre duas subidas", () => {
       vida: 20,
       vidaMaxima: 35,
       vidaBonus: 0,
+      anotacao: "",
     });
   });
 
@@ -701,6 +702,7 @@ describe("o Log", () => {
       vida: 28,
       vidaMaxima: 28,
       vidaBonus: 0,
+      anotacao: "",
     });
 
     // E a Mesa continua de onde parou: o Log seguiu, não recomeçou.
@@ -766,6 +768,162 @@ describe("o Log", () => {
 
     expect(resposta).toEqual({ aceito: false, motivo: "A Sessão já está em curso" });
     expect(mestre.eventos).toHaveLength(1);
+  });
+});
+
+/**
+ * A audiência em cena. "Privado" aqui não quer dizer escondido na tela do outro:
+ * quer dizer que **nunca chegou lá**. Por isso todo teste daqui olha os Eventos
+ * que o cliente recebeu, e não o que ele desenharia.
+ */
+describe("Anotações privadas", () => {
+  it("o jogador escreve e o bloco volta para ele", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    await celular.enviar({ tipo: "atualizarAnotacao", texto: "o taverneiro mentiu sobre o poço" });
+
+    expect(celular.estado.personagens["elara"]?.anotacao).toBe(
+      "o taverneiro mentiu sobre o poço",
+    );
+  });
+
+  it("o Evento nasce com audiência privada do personagem", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    await celular.enviar({ tipo: "atualizarAnotacao", texto: "anel no bolso do bardo" });
+
+    expect(celular.eventos.at(-1)).toMatchObject({
+      tipo: "AnotacaoAtualizada",
+      personagem: "elara",
+      texto: "anel no bolso do bardo",
+      autor: { tipo: "jogador", personagem: "elara" },
+      audiencia: [{ privado: "elara" }],
+    });
+  });
+
+  it("cada Evento carrega o bloco inteiro, não o que mudou", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    await celular.enviar({ tipo: "atualizarAnotacao", texto: "primeira linha" });
+    await celular.enviar({ tipo: "atualizarAnotacao", texto: "primeira linha\nsegunda linha" });
+
+    // O segundo Evento não diz "acrescente uma linha": ele diz o que o bloco é
+    // agora. É o mesmo motivo do ADR-0003 — o Evento guarda o resultado.
+    expect(celular.eventos.at(-1)).toMatchObject({
+      texto: "primeira linha\nsegunda linha",
+    });
+  });
+
+  it("o celular do colega não recebe o Evento — ele nunca sai do servidor", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const dela = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const dele = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    await dela.enviar({ tipo: "atualizarAnotacao", texto: "não confio no Thorin" });
+
+    // Nos Eventos recebidos, não na tela: o texto não está no navegador dele
+    // para ser escondido por CSS nenhum.
+    expect(dele.eventos).toEqual([]);
+    expect(dele.estado.personagens["elara"]?.anotacao).toBe("");
+  });
+
+  it("a TV também não recebe: ela fica no meio da mesa, virada para todo mundo", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await celular.enviar({ tipo: "atualizarAnotacao", texto: "a chave está na bota" });
+
+    expect(tv.eventos).toEqual([]);
+    expect(tv.estado.personagens["elara"]?.anotacao).toBe("");
+  });
+
+  it("o mestre enxerga tudo: a tela de Log dele não filtra nada", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    await celular.enviar({ tipo: "atualizarAnotacao", texto: "vou trair o grupo no terceiro ato" });
+
+    expect(mestre.eventos.at(-1)).toMatchObject({ tipo: "AnotacaoAtualizada", personagem: "elara" });
+    expect(mestre.estado.personagens["elara"]?.anotacao).toBe("vou trair o grupo no terceiro ato");
+  });
+
+  it("o snapshot já vem filtrado: quem reconecta não recebe o bloco do colega", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const dela = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const dele = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    await dela.enviar({ tipo: "atualizarAnotacao", texto: "o mapa é falso" });
+    await dele.enviar({ tipo: "atualizarAnotacao", texto: "comprar corda nova" });
+
+    // Reconectar é o caminho por onde o estado inteiro sai do servidor de uma
+    // vez. Se a projeção fosse só nos deltas, era aqui que vazava.
+    await dele.reconectar();
+
+    expect(dele.estado.personagens["thorin"]?.anotacao).toBe("comprar corda nova");
+    expect(dele.estado.personagens["elara"]?.anotacao).toBe("");
+  });
+
+  it("o jogador não escreve no bloco do colega: o Comando não tem onde dizer de quem é", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const dele = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    await dele.enviar({ tipo: "atualizarAnotacao", texto: "isto é meu" });
+
+    // O personagem sai do socket, não do Comando. Não existe forma de escrever
+    // um `atualizarAnotacao` sobre um terceiro.
+    expect(dele.estado.personagens["thorin"]?.anotacao).toBe("isto é meu");
+    expect(dele.estado.personagens["elara"]?.anotacao).toBe("");
+  });
+
+  it("o mestre não escreve no bloco de ninguém", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    const resposta = await mestre.enviar({ tipo: "atualizarAnotacao", texto: "nota do mestre" });
+
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Só o jogador pode enviar 'atualizarAnotacao'",
+    });
+    expect(mestre.eventos).toEqual([]);
+  });
+
+  it("sobrevive ao reinício, porque ela está no Log", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    await celular.enviar({ tipo: "atualizarAnotacao", texto: "a porta range" });
+    await mesa.reiniciar();
+
+    expect(celular.estado.personagens["elara"]?.anotacao).toBe("a porta range");
+  });
+
+  it("apagar o bloco é escrever nada nele, e isso também é um fato", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    await celular.enviar({ tipo: "atualizarAnotacao", texto: "engano meu" });
+    await celular.enviar({ tipo: "atualizarAnotacao", texto: "" });
+
+    expect(celular.estado.personagens["elara"]?.anotacao).toBe("");
+    // O Log não perde o que foi escrito antes: apagar na tela não apaga o Log.
+    expect(celular.eventos).toHaveLength(2);
   });
 });
 

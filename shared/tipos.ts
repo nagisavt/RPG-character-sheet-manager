@@ -23,7 +23,23 @@ export type Corpo =
   | { tipo: "SessaoFinalizada" }
   | VidaAlterada
   | VidaBonusConcedida
+  | AnotacaoAtualizada
   | CenaTrocada;
+
+/**
+ * O bloco de notas de um jogador, como ele ficou. Guarda o **texto inteiro** e
+ * não o que mudou, pelo mesmo motivo do ADR-0003: um Log de diferenças precisa
+ * ser lido do começo para significar alguma coisa, e um pedaço perdido no meio
+ * envenena tudo que vem depois.
+ *
+ * Nasce com audiência `privado:<personagem>`. Não é escondido de ninguém — ele
+ * nunca sai do servidor para mais ninguém.
+ */
+export type AnotacaoAtualizada = {
+  tipo: "AnotacaoAtualizada";
+  personagem: PersonagemId;
+  texto: string;
+};
 
 /**
  * O grupo mudou de lugar. Grava o **nome do arquivo** em `assets/cenas/`, sem
@@ -154,4 +170,10 @@ export type Personagem = {
    * `VidaBonusConcedida` e é gasto pelo dano antes da vida.
    */
   vidaBonus: number;
+  /**
+   * O bloco de notas dele. Está no estado de todo mundo **no servidor**, e é a
+   * projeção por socket que decide quem leva o quê: o dono e o mestre levam o
+   * texto, os outros levam vazio. Nunca é escondido no cliente.
+   */
+  anotacao: string;
 };

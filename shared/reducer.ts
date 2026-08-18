@@ -42,6 +42,21 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
       };
     }
 
+    case "AnotacaoAtualizada": {
+      const personagem = estado.personagens[evento.personagem];
+      if (personagem === undefined) return estado;
+
+      // Atribui o bloco inteiro. O cliente que não tinha direito de ver este
+      // Evento não chega aqui: ele nunca o recebeu.
+      return {
+        ...estado,
+        personagens: {
+          ...estado.personagens,
+          [evento.personagem]: { ...personagem, anotacao: evento.texto },
+        },
+      };
+    }
+
     case "VidaBonusConcedida": {
       const personagem = estado.personagens[evento.personagem];
       if (personagem === undefined) return estado;

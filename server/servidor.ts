@@ -17,7 +17,7 @@ import {
 } from "../shared/identidade.js";
 import { reconstruir, reducer } from "../shared/reducer.js";
 import { MESA_ID, type Estado, type Ficha } from "../shared/tipos.js";
-import { podeVer } from "./audiencia.js";
+import { podeVer, projetar } from "./audiencia.js";
 import { autorizar } from "./autorizacao.js";
 import { abrirCatalogo } from "./catalogo.js";
 import { decisor } from "./decisor.js";
@@ -89,7 +89,8 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
       : null;
 
   io.on("connection", (socket) => {
-    socket.emit("snapshot", { estado, ate });
+    // Já projetado: o que este socket não tem direito de ver não sai daqui.
+    socket.emit("snapshot", { estado: projetar(estado, socket.data.identidade), ate });
     socket.on("comando", (comando, responder) => responder(processar(socket, comando)));
     // Consultar o Catálogo não é Comando: não muda nada, não vira Evento e não
     // passa por autorização — é a mesma regra do SRD para qualquer tela.
