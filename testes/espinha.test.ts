@@ -1,6 +1,3 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { catalogoDeExemplo, misselMagico } from "../harness/catalogo-exemplo.js";
@@ -8,14 +5,9 @@ import { criarMesa, type Mesa } from "../harness/criar-mesa.js";
 import { elara, fichasDeExemplo, thorin } from "../harness/fichas-exemplo.js";
 
 let mesa: Mesa;
-/** Só o teste do Log escrito por um servidor antigo precisa de um caminho próprio. */
-let pastaDoLog: string | null = null;
 
 afterEach(async () => {
   await mesa?.encerrar();
-  // Depois do `encerrar`: no Windows não se apaga um SQLite ainda aberto.
-  if (pastaDoLog !== null) await rm(pastaDoLog, { recursive: true, force: true });
-  pastaDoLog = null;
 });
 
 it("uma Sessão iniciada pelo mestre chega na TV", async () => {
@@ -649,8 +641,7 @@ describe("o Log", () => {
   });
 
   it("um Evento escrito antes de a Vida bônus existir continua valendo no replay", async () => {
-    pastaDoLog = await mkdtemp(join(tmpdir(), "mesa-legado-"));
-    mesa = await criarMesa({ fichas: fichasDeExemplo, caminhoDoLog: join(pastaDoLog, "mesa.db") });
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });

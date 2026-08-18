@@ -80,17 +80,14 @@ export const lerLinha = (linha: string): Leitura => {
 
     case "/dano":
     case "/cura": {
-      const leitura = lerAlvo(verbo, argumentos);
+      const leitura = lerAlvoEQuantidade(verbo, argumentos);
       if ("erro" in leitura) return leitura;
-      // O sinal vem do verbo, nunca do número: `/dano thorin -8` é erro de
-      // digitação do mestre, e curar por engano quem devia levar dano é o tipo
-      // de coisa que só se descobre três turnos depois.
       const diferenca = verbo === "/dano" ? -leitura.quantidade : leitura.quantidade;
       return { comando: { tipo: "alterarVida", personagem: leitura.personagem, diferenca } };
     }
 
     case "/bonus": {
-      const leitura = lerAlvo(verbo, argumentos);
+      const leitura = lerAlvoEQuantidade(verbo, argumentos);
       if ("erro" in leitura) return leitura;
       return {
         comando: {
@@ -112,8 +109,8 @@ export const lerLinha = (linha: string): Leitura => {
  * A quantidade vai **sem sinal**: quem diz para que lado é o verbo. Um `-8`
  * aceito aqui viraria um `/dano` que cura, e um Log não se apaga.
  */
-const lerAlvo = (
-  verbo: string,
+const lerAlvoEQuantidade = (
+  verbo: "/dano" | "/cura" | "/bonus",
   argumentos: readonly string[],
 ): { personagem: string; quantidade: number } | { erro: string } => {
   const [personagem, quantidade, ...sobra] = argumentos;

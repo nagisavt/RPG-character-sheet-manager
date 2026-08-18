@@ -50,8 +50,14 @@ export type VidaAlterada = {
   personagem: PersonagemId;
   declarado: number;
   vida: number;
-  /** Onde o outro pote ficou: um dano come a Vida bônus antes de encostar na vida. */
-  vidaBonus: number;
+  /**
+   * Onde o outro pote ficou: um dano come a Vida bônus antes de encostar na vida.
+   *
+   * Opcional porque os Eventos gravados antes de a Vida bônus existir não têm o
+   * campo, e um Log não se reescreve: eles vão continuar sem ele para sempre. O
+   * decisor sempre grava; quem lê é que precisa saber que a ausência acontece.
+   */
+  vidaBonus?: number;
 };
 
 /**

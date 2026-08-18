@@ -142,6 +142,10 @@ const Vida = ({
       >
         <div
           style={{
+            // A Vida bônus não tem teto, mas a barra tem: ela satura na largura
+            // da vida do personagem. Deixar a barra crescer para fora seria
+            // reescalar a fileira inteira da TV por causa de um efeito de uma
+            // noite; quem carrega o valor exato é o `+N` do lado do nome.
             width: `${Math.min(personagem.vidaBonus / personagem.vidaMaxima, 1) * 100}%`,
           }}
         />
