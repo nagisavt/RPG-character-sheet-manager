@@ -50,6 +50,16 @@ export const VERBETES: readonly Verbete[] = [
     exemplo: "/cura thorin 5",
   },
   {
+    uso: "/combate",
+    descricao: "Entra em Combate. Os Monstros e as iniciativas entram depois.",
+    exemplo: "/combate",
+  },
+  {
+    uso: "/iniciativa <monstro> <d20>",
+    descricao: "O d20 que você rolou por um Monstro. O bônus dele o servidor soma.",
+    exemplo: "/iniciativa goblin-arqueiro 14",
+  },
+  {
     uso: "/ganha <personagem> <quantidade>",
     descricao: "Põe Moedas no bolso. Um número só: a conversão acontece antes, na sua cabeça.",
     exemplo: "/ganha thorin 50",
@@ -81,6 +91,26 @@ export const lerLinha = (linha: string): Leitura => {
 
     case "/finalizar":
       return { comando: { tipo: "finalizarSessao" } };
+
+    case "/combate":
+      return { comando: { tipo: "iniciarCombate" } };
+
+    case "/iniciativa": {
+      // O nome do Monstro tem espaço — "Goblin arqueiro" é o que a mesa fala —,
+      // então o que se lê da direita é o d20 e o resto todo é o nome. Declarar
+      // os Monstros é na tela do mestre, onde nome, quantidade e bônus cabem
+      // numa linha cada.
+      const ultimo = argumentos.at(-1);
+      const d20 = Number(ultimo);
+      const nome = argumentos.slice(0, -1).join(" ");
+
+      if (nome === "") return { erro: "Escreva '/iniciativa <monstro> <d20>'" };
+      if (!Number.isInteger(d20) || d20 < 1 || d20 > 20) {
+        return { erro: `'${ultimo}' não é um d20: escreva um inteiro de 1 a 20` };
+      }
+
+      return { comando: { tipo: "declararIniciativaDoMonstro", nome, d20 } };
+    }
 
     case "/cena": {
       const [nome, ...sobra] = argumentos;
@@ -122,7 +152,7 @@ export const lerLinha = (linha: string): Leitura => {
 };
 
 /**
- * `<personagem> <quantidade>`, a forma de todo Comando que mexe em número.
+ * `<alvo> <quantidade>`, a forma de todo Comando que mexe em número.
  *
  * A quantidade vai **sem sinal**: quem diz para que lado é o verbo. Um `-8`
  * aceito aqui viraria um `/dano` que cura, e um Log não se apaga.

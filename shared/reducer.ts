@@ -1,4 +1,11 @@
-import type { Estado, EventoNovo, Personagem, PersonagemId } from "./tipos.js";
+import type {
+  Combate,
+  Estado,
+  EventoNovo,
+  Participante,
+  Personagem,
+  PersonagemId,
+} from "./tipos.js";
 
 /**
  * `reducer(estado, evento) => estado`. Puro: sem banco, sem socket, sem relógio
@@ -17,6 +24,27 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
 
     case "CenaTrocada":
       return { ...estado, cena: evento.cena };
+
+    case "CombateIniciado":
+      // Começa vazio: os Monstros e as iniciativas chegam depois, cada um no
+      // seu Evento. Iniciar duas vezes é recusado pelo decisor, não aqui.
+      return { ...estado, combate: { monstros: [], iniciativas: [] } };
+
+    case "MonstrosDeclarados":
+      return comCombate(estado, (combate) => ({ ...combate, monstros: evento.monstros }));
+
+    case "IniciativaDeclarada":
+      return comCombate(estado, (combate) => ({
+        ...combate,
+        // Substitui a do mesmo Participante: quem digitou 7 e queria 17 declara
+        // de novo, e o Log guarda as duas tentativas sem duplicar a fila.
+        iniciativas: [
+          ...combate.iniciativas.filter(
+            (antiga) => !mesmo(antiga.participante, evento.participante),
+          ),
+          { participante: evento.participante, d20: evento.d20, resultado: evento.resultado },
+        ],
+      }));
 
     case "VidaAlterada":
       // **Atribui, não acumula** (ADR-0003). É o que faz o replay do Log dar no
@@ -44,6 +72,20 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
       return comPersonagem(estado, evento.personagem, () => ({ anotacao: evento.texto }));
   }
 };
+
+/** Dois Participantes são o mesmo quando são do mesmo tipo e do mesmo nome. */
+export const mesmo = (um: Participante, outro: Participante): boolean =>
+  um.tipo === "personagem" && outro.tipo === "personagem"
+    ? um.personagem === outro.personagem
+    : um.tipo === "monstro" && outro.tipo === "monstro" && um.nome === outro.nome;
+
+/**
+ * O Combate trocado. Um Evento de Combate que chega fora dele passa batido, do
+ * mesmo jeito que o Evento de um personagem que saiu das Fichas: o decisor não
+ * deixa isso acontecer, e se um dia deixar, o replay não quebra por causa disso.
+ */
+const comCombate = (estado: Estado, mudanca: (combate: Combate) => Combate): Estado =>
+  estado.combate === null ? estado : { ...estado, combate: mudanca(estado.combate) };
 
 /**
  * Um personagem trocado, e o resto do estado igual.

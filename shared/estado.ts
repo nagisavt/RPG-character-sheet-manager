@@ -8,6 +8,9 @@ export const estadoInicial = (fichas: readonly Ficha[]): Estado => ({
   sessaoAtiva: false,
   personagens: Object.fromEntries(fichas.map((ficha) => [ficha.id, personagemDe(ficha)])),
   cena: null,
+  // Fora de Combate. Ele nasce de um `CombateIniciado` e some quando o mestre
+  // encerra — nunca da Ficha, que não sabe de que noite se está falando.
+  combate: null,
 });
 
 /**
@@ -23,6 +26,7 @@ const personagemDe = (ficha: Ficha) => ({
   nome: ficha.nome,
   vida: ficha.vidaMaxima,
   vidaMaxima: ficha.vidaMaxima,
+  bonusDeIniciativa: ficha.bonusDeIniciativa,
   // Zero, e não um campo da Ficha: a Vida bônus é concedida durante a Sessão e
   // gasta na mesma noite. Começar a campanha com ela seria a Ficha inventando
   // um fato que ninguém declarou.

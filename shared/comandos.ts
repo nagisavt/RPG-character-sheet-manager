@@ -1,4 +1,4 @@
-import type { PersonagemId } from "./tipos.js";
+import type { Monstro, PersonagemId } from "./tipos.js";
 
 /**
  * Um Comando é a intenção que um cliente envia ao servidor. Pode ser recusado.
@@ -17,6 +17,13 @@ export type Comando =
   | { tipo: "trocarCena"; cena: string }
   /** `diferenca` é assinada: negativa é gasto, positiva é ganho. Quem para em zero é o decisor. */
   | { tipo: "alterarMoedas"; personagem: PersonagemId; diferenca: number }
+  | { tipo: "iniciarCombate" }
+  /** A lista inteira, não um acréscimo: declarar de novo substitui os Monstros de antes. */
+  | { tipo: "declararMonstros"; monstros: readonly Monstro[] }
+  /** O d20 cru que o jogador rolou na mesa. Não diz de quem é: sai do socket. */
+  | { tipo: "declararIniciativa"; d20: number }
+  /** O d20 de um Monstro, digitado pelo mestre pelo mesmo caminho. */
+  | { tipo: "declararIniciativaDoMonstro"; nome: string; d20: number }
   /**
    * O bloco de notas inteiro, como ele ficou. Não diz de quem é: o personagem
    * sai do socket, e é isso que faz não existir escrever no bloco do colega.

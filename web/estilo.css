@@ -547,3 +547,75 @@ span.voltar {
   color: var(--letra);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------------
+ * O Combate no notebook do mestre: a chamada, e quem ainda não declarou.
+ * ------------------------------------------------------------------------- */
+
+.combate {
+  margin-top: 2rem;
+  border-top: 1px solid var(--borda);
+  padding-top: 1.5rem;
+}
+
+.combate header {
+  margin-bottom: 1rem;
+}
+
+.combate h2 {
+  flex: 1;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.chamada {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.chamada li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.75rem;
+}
+
+.chamada strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.combate form {
+  margin-top: 0;
+}
+
+.declarar {
+  margin-top: 1.25rem;
+}
+
+.declarar input:first-child {
+  flex: 1;
+}
+
+/* Dois dígitos, e a linha não desmonta no celular do mestre. */
+.curto,
+.dado input {
+  width: 4.5rem;
+}
+
+/* A faixa de iniciativa no celular: o Combate começou e a mesa está esperando
+   por este aparelho. Ela fica acima dos três botões e não é um quarto — é o
+   estado do Combate, não um lugar para ir. */
+.faixa {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 0.75rem;
+  border-color: var(--vida);
+}
+
+.faixa strong {
+  font-variant-numeric: tabular-nums;
+}

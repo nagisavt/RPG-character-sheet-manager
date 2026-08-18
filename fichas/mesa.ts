@@ -11,6 +11,9 @@ import type { Ficha } from "../shared/tipos.js";
  *
  * O que muda **durante** a sessão não entra aqui: isso é Log.
  *
+ * `bonusDeIniciativa` é o que o servidor soma no d20 que a mesa rolou. Ele vive
+ * só aqui: nunca vem do celular e nunca vira Evento.
+ *
  * `moedas` é com quanto o personagem chegou no começo da campanha, num número
  * só e sem denominação. O que ele ganhou e gastou depois é Log, e editar aqui
  * não reescreve nada disso.
@@ -26,6 +29,7 @@ export const fichasDaMesa: readonly Ficha[] = [
     nome: "Thorin",
     vidaMaxima: 28,
     moedas: 120,
+    bonusDeIniciativa: 1,
     inventario: [
       { chave: "srd-2024_longsword", quantidade: 1 },
       { chave: "srd-2024_shield", quantidade: 1 },
@@ -46,6 +50,7 @@ export const fichasDaMesa: readonly Ficha[] = [
     nome: "Elara",
     vidaMaxima: 22,
     moedas: 35,
+    bonusDeIniciativa: 3,
     inventario: [{ chave: "srd-2024_quarterstaff", quantidade: 1 }],
     magias: [
       { chave: "srd-2024_fire-bolt", conhecida: true },

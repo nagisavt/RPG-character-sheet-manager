@@ -51,6 +51,27 @@ const listar = async (pasta: string): Promise<string[]> => {
   return arquivos.filter((arquivo) => arquivo.endsWith(".ts")).map((arquivo) => posix.join(pasta, arquivo.replaceAll("\\", "/")));
 };
 
+/**
+ * "O servidor não tem gerador aleatório em lugar nenhum do caminho de escrita."
+ *
+ * O decisor já é conferido linha abaixo, mas a regra é maior que ele: o dado é
+ * rolado **na mesa**, por uma pessoa, e digitado. Um `Math.random` em qualquer
+ * lugar do caminho que grava no Log seria o app rolando por alguém — e num Log
+ * que nunca se apaga, ninguém consegue provar depois que não foi isso.
+ */
+describe("ninguém rola dado pela mesa", () => {
+  it("não existe gerador aleatório no servidor nem no que ele compartilha", async () => {
+    const fontes = [...(await listar("server")), ...(await listar("shared"))];
+
+    expect(fontes.length).toBeGreaterThan(0);
+    for (const caminho of fontes) {
+      expect(await semComentarios(caminho), caminho).not.toMatch(
+        /Math\.random|randomUUID|randomBytes|randomInt/,
+      );
+    }
+  });
+});
+
 describe.each(["shared/reducer.ts", "server/decisor.ts"])("%s é puro", (caminho) => {
   it.each(IMPUREZAS)("não tem $nome", async ({ padrao }) => {
     expect(await semComentarios(caminho)).not.toMatch(padrao);

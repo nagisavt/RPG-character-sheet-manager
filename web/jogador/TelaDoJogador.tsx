@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode, type Ref } from "react";
 import type { Consulta, Entrada, TipoDoCatalogo } from "../../shared/catalogo.js";
 import type { Comando, Resposta } from "../../shared/comandos.js";
-import type { Ficha, Personagem, PersonagemId } from "../../shared/tipos.js";
+import type { Combate, Ficha, Personagem, PersonagemId } from "../../shared/tipos.js";
 import { BarraDeVida, ImagemOuRotulo, Moedas, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 
@@ -76,7 +76,15 @@ export const TelaDoJogador = () => {
     );
   }
 
-  return <Hub personagem={personagem} ficha={ficha} consultar={consultar} enviar={enviar} />;
+  return (
+    <Hub
+      personagem={personagem}
+      ficha={ficha}
+      combate={ligacao.estado.combate}
+      consultar={consultar}
+      enviar={enviar}
+    />
+  );
 };
 
 /**
@@ -119,11 +127,13 @@ const Escolha = ({
 const Hub = ({
   personagem,
   ficha,
+  combate,
   consultar,
   enviar,
 }: {
   personagem: Personagem;
   ficha: Ficha;
+  combate: Combate | null;
   consultar: (consulta: Consulta) => Promise<Entrada | null>;
   enviar: (comando: Comando) => Promise<Resposta>;
 }) => {
@@ -148,6 +158,8 @@ const Hub = ({
           <Moedas personagem={personagem} />
         </div>
       </header>
+
+      <Iniciativa personagem={personagem} combate={combate} enviar={enviar} />
 
       <nav className="tres">
         <button onClick={() => inventario.current?.showModal()}>Inventário</button>
@@ -180,6 +192,89 @@ const Hub = ({
 
       <BlocoDeNotas ref={notas} anotacao={personagem.anotacao} enviar={enviar} />
     </main>
+  );
+};
+
+/**
+ * O d20 que o jogador rolou **na mesa**, com o dado dele, na frente de todo
+ * mundo. O celular só transporta o número: o servidor soma o bônus da Ficha, e
+ * não existe gerador aleatório em lugar nenhum do caminho (ADR-0001).
+ *
+ * O popup abre sozinho quando o Combate começa e ainda falta a dele. Fechar é
+ * permitido, e a faixa continua ali para reabrir — inclusive depois de
+ * declarado, porque quem digitou 7 e queria 17 precisa de um jeito de corrigir.
+ */
+const Iniciativa = ({
+  personagem,
+  combate,
+  enviar,
+}: {
+  personagem: Personagem;
+  combate: Combate | null;
+  enviar: (comando: Comando) => Promise<Resposta>;
+}) => {
+  const popup = useRef<HTMLDialogElement>(null);
+  const [d20, setD20] = useState("");
+  const [recusa, setRecusa] = useState<string | null>(null);
+
+  const minha =
+    combate?.iniciativas.find(
+      (qual) =>
+        qual.participante.tipo === "personagem" && qual.participante.personagem === personagem.id,
+    ) ?? null;
+
+  const esperando = combate !== null && minha === null;
+
+  useEffect(() => {
+    // O Combate começou e a mesa está esperando por este celular. Abrir sozinho
+    // é o ponto: ninguém devia ter que procurar onde digitar.
+    if (esperando) popup.current?.showModal();
+  }, [esperando]);
+
+  if (combate === null) return null;
+
+  return (
+    <>
+      <button className="faixa" onClick={() => popup.current?.showModal()}>
+        {minha === null ? (
+          "Declare sua iniciativa"
+        ) : (
+          <>
+            Iniciativa <strong>{minha.resultado}</strong>{" "}
+            <span className="apagado">(d20 {minha.d20}) — toque para corrigir</span>
+          </>
+        )}
+      </button>
+
+      <Modal ref={popup} titulo="Sua iniciativa">
+        <p className="apagado">
+          Role o d20 na mesa e digite o que saiu no dado. O bônus quem soma é o servidor.
+        </p>
+        <form
+          className="dado"
+          onSubmit={async (evento: FormEvent) => {
+            evento.preventDefault();
+            const resposta = await enviar({ tipo: "declararIniciativa", d20: Number(d20) });
+            setRecusa(resposta.aceito ? null : resposta.motivo);
+            if (resposta.aceito) {
+              setD20("");
+              popup.current?.close();
+            }
+          }}
+        >
+          <input
+            value={d20}
+            onChange={(evento) => setD20(evento.target.value)}
+            inputMode="numeric"
+            placeholder="14"
+            aria-label="O d20 que saiu"
+            autoFocus
+          />
+          <button type="submit">declarar</button>
+        </form>
+        {recusa !== null && <p className="resposta recusada">{recusa}</p>}
+      </Modal>
+    </>
   );
 };
 

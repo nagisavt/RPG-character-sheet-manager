@@ -39,6 +39,18 @@ export const projetar = (estado: Estado, identidade: Identidade): Estado => {
 
   return {
     ...estado,
+    // Os números da rolagem não são da Mesa: ela vê nomes em ordem, e mais
+    // nada. Cada um vê a própria; o mestre vê todas, e saiu acima.
+    combate:
+      estado.combate === null
+        ? null
+        : {
+            ...estado.combate,
+            iniciativas: estado.combate.iniciativas.filter(
+              (qual) =>
+                qual.participante.tipo === "personagem" && qual.participante.personagem === meu,
+            ),
+          },
     personagens: Object.fromEntries(
       Object.entries(estado.personagens).map(([id, personagem]) => [
         id,

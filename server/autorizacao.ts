@@ -25,6 +25,12 @@ const QUEM_PODE: Record<TipoDeComando, Identidade["como"]> = {
   // O bloco de notas é do jogador, e o mestre não escreve nele: ele lê tudo na
   // tela de Log, que é outra coisa.
   atualizarAnotacao: "jogador",
+  iniciarCombate: "mestre",
+  declararMonstros: "mestre",
+  // A segunda metade da regra: o jogador declara a **própria** iniciativa, e o
+  // Comando não tem onde carregar outro Participante.
+  declararIniciativa: "jogador",
+  declararIniciativaDoMonstro: "mestre",
 };
 
 export const autorizar = (identidade: Identidade, tipo: TipoDeComando): Resposta => {
