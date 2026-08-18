@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { catalogoDeExemplo, misselMagico } from "../harness/catalogo-exemplo.js";
+import { catalogoDeExemplo, corda, misselMagico } from "../harness/catalogo-exemplo.js";
 import { criarMesa, type Mesa } from "../harness/criar-mesa.js";
 import { elara, fichasDeExemplo, thorin } from "../harness/fichas-exemplo.js";
 
@@ -348,6 +348,74 @@ describe("Catálogo", () => {
     expect(await celular.consultar({ tipo: "magia", chave: "srd-2024_magic-missile" })).toEqual(
       misselMagico,
     );
+  });
+});
+
+describe("a Ficha do jogador", () => {
+  it("o celular pede a própria Ficha e recebe inventário, magias e equipado", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    expect(await celular.minhaFicha()).toEqual(elara);
+  });
+
+  it("a Ficha vem do socket: cada celular recebe a sua, sem pedir por nome", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const dela = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const dele = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+
+    // O pedido não tem onde carregar um personagem: pedir a Ficha do colega não
+    // é recusado, é impossível de escrever.
+    expect((await dela.minhaFicha())?.id).toBe("elara");
+    expect((await dele.minhaFicha())?.id).toBe("thorin");
+  });
+
+  it("a TV não tem Ficha: ela não é de ninguém", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    expect(await tv.minhaFicha()).toBeNull();
+  });
+
+  it("pedir a Ficha não vira Evento: ela não entra no Log", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    await celular.minhaFicha();
+
+    expect(mestre.eventos).toEqual([]);
+  });
+
+  it("editar a Ficha e reiniciar é o que muda o que o celular vê", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    expect((await celular.minhaFicha())?.inventario).toEqual([]);
+
+    // A única forma de uma Ficha mudar: o mestre edita o arquivo e reinicia
+    // (ADR-0002). Não existe Comando de equipar, nem tela de cadastro.
+    await mesa.reiniciar([thorin, { ...elara, inventario: [{ chave: corda.chave, quantidade: 2 }] }]);
+
+    expect((await celular.minhaFicha())?.inventario).toEqual([
+      { chave: "srd-2024_rope", quantidade: 2 },
+    ]);
+  });
+
+  it("o inventário e as magias apontam para o Catálogo, que é quem tem a descrição", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
+
+    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+
+    const ficha = await celular.minhaFicha();
+    const chave = ficha!.magias[0]!.chave;
+
+    // A Ficha guarda a chave; a descrição sai do Catálogo, pelo mesmo socket.
+    expect(await celular.consultar({ tipo: "magia", chave })).toEqual(misselMagico);
   });
 });
 

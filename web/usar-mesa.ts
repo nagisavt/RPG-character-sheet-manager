@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
+import type { Consulta, Entrada } from "../shared/catalogo.js";
 import type { Comando, Resposta } from "../shared/comandos.js";
 import type { Credencial, Snapshot, Transmissao } from "../shared/identidade.js";
 import { lerLinha } from "../shared/linha-de-comando.js";
 import { reducer } from "../shared/reducer.js";
-import { MESA_ID, type Estado } from "../shared/tipos.js";
+import { MESA_ID, type Estado, type Ficha } from "../shared/tipos.js";
 
 /**
  * A ligação de uma tela com a Mesa. É o outro lado exato do harness de teste:
@@ -69,5 +70,26 @@ export const usarMesa = () => {
     [enviar],
   );
 
-  return { ligacao, entrar, enviar, digitar };
+  /**
+   * O Catálogo, pelo mesmo socket e fora do fluxo de Comando: a regra do SRD não
+   * é fato da Mesa e não entra no Log. Devolve `null` para o que não está lá —
+   * Catálogo não semeado não derruba a tela.
+   */
+  const consultar = useCallback(
+    async (consulta: Consulta): Promise<Entrada | null> =>
+      (await socket.current?.emitWithAck("consultar", consulta)) ?? null,
+    [],
+  );
+
+  /**
+   * A Ficha desta tela. Não leva personagem no pedido: quem ela é já está
+   * amarrado no socket desde o handshake, e é isso que faz não existir pedir a
+   * Ficha do colega.
+   */
+  const minhaFicha = useCallback(
+    async (): Promise<Ficha | null> => (await socket.current?.emitWithAck("minhaFicha")) ?? null,
+    [],
+  );
+
+  return { ligacao, entrar, enviar, digitar, consultar, minhaFicha };
 };

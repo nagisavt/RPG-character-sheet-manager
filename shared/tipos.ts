@@ -86,14 +86,51 @@ export type Evento = EventoNovo & { id: number; timestamp: string };
 export type TipoDeEvento = Corpo["tipo"];
 
 /**
+ * O que o personagem carrega. A Ficha guarda a **chave do Catálogo**, não o nome
+ * nem a descrição: copiar a regra para cá seria ter duas versões dela, e a do
+ * Catálogo é a que o SRD atualiza.
+ */
+export type ItemDaFicha = {
+  /** `srd-2024_rope`. Consultada no Catálogo na hora de exibir. */
+  chave: string;
+  quantidade: number;
+};
+
+/**
+ * Uma magia da Ficha. `conhecida` já nasce aqui mesmo com o v1 só lendo: a
+ * distinção entre conhecer e preparar é do personagem, não da tela, e um campo
+ * que aparece depois é uma Ficha inteira reescrita à mão.
+ */
+export type MagiaDaFicha = {
+  chave: string;
+  conhecida: boolean;
+};
+
+/**
+ * Onde uma coisa pode estar vestida. Lista fechada: o v1 não equipa nem
+ * desequipa nada, então o que sobra é onde a folha de papel já diz que está.
+ */
+export type Slot = "maoPrincipal" | "maoSecundaria" | "corpo";
+
+/** O mapa de slots, com a chave do item em cada um — ou nada naquele slot. */
+export type Equipado = Record<Slot, string | null>;
+
+/**
  * A Ficha é a folha de papel digitada à mão pelo mestre num arquivo versionado.
  * É a posição inicial do estado da Mesa e nunca vira Evento (ADR-0002).
+ *
+ * O que o v1 só **lê** — inventário, magias, equipado — mora aqui e não
+ * atravessa para o `Personagem`: não é estado de Mesa, não muda durante a
+ * Sessão, e o celular a pede por consulta, fora do Log.
  */
 export type Ficha = {
   id: PersonagemId;
   nome: string;
   /** Muda entre sessões, ao subir de nível: por isso mora aqui e não no Log (ADR-0002). */
   vidaMaxima: number;
+  inventario: readonly ItemDaFicha[];
+  magias: readonly MagiaDaFicha[];
+  equipado: Equipado;
 };
 
 /** O estado da Mesa: `eventos.reduce(reducer, estadoInicial(fichas))`. Vive em memória. */

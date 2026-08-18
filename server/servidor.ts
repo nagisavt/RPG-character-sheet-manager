@@ -65,7 +65,7 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
   // faria as duas coisas responderem à mesma requisição.
   const http = opcoes.paginas === undefined ? createServer() : createServer(opcoes.paginas);
   const io = new ServidorSocket<
-    { comando: ComandoDoCliente; consultar: ConsultaDoCliente },
+    { comando: ComandoDoCliente; consultar: ConsultaDoCliente; minhaFicha: FichaDoCliente },
     EventosDoServidor,
     never,
     Sessao
@@ -91,7 +91,16 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
     socket.on("consultar", (consulta, responder) =>
       responder(ehConsulta(consulta) ? catalogo.consultar(consulta) : null),
     );
+    // A Ficha também não é Comando: ela não muda nada e não entra no Log
+    // (ADR-0002). O pedido não carrega personagem nenhum — quem é ele já está
+    // amarrado no socket, e é por isso que não existe pedir a Ficha do colega.
+    socket.on("minhaFicha", (responder) => responder(fichaDe(socket.data.identidade)));
   });
+
+  const fichaDe = (identidade: Identidade): Ficha | null =>
+    identidade.como === "jogador"
+      ? (opcoes.fichas.find((ficha) => ficha.id === identidade.personagem) ?? null)
+      : null;
 
   const processar = (socket: Socket<never, EventosDoServidor, never, Sessao>, comando: Comando) => {
     const { identidade } = socket.data;
@@ -192,6 +201,8 @@ const ehConsulta = (consulta: unknown): consulta is Consulta => {
 type ComandoDoCliente = (comando: Comando, responder: (resposta: Resposta) => void) => void;
 
 type ConsultaDoCliente = (consulta: Consulta, responder: (entrada: Entrada | null) => void) => void;
+
+type FichaDoCliente = (responder: (ficha: Ficha | null) => void) => void;
 
 type EventosDoServidor = {
   snapshot: (snapshot: Snapshot) => void;

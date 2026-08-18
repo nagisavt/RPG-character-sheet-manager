@@ -51,6 +51,11 @@ export type Cliente = {
   digitar: (linha: string) => Promise<Resposta>;
   /** O Catálogo, pelo mesmo socket. Não muda nada: nenhum Evento sai daqui. */
   consultar: (consulta: Consulta) => Promise<Entrada | null>;
+  /**
+   * A Ficha deste socket. `null` para quem não é jogador — a TV não é de
+   * ninguém, e o mestre lê as Fichas do arquivo, que é dele.
+   */
+  minhaFicha: () => Promise<Ficha | null>;
   /** O celular que dormiu e acordou: cai e volta sozinho, com o servidor no ar. */
   reconectar: () => Promise<void>;
   desconectar: () => void;
@@ -203,6 +208,7 @@ const conectarCliente = async (
     },
     enviar,
     consultar: (consulta) => socket.emitWithAck("consultar", consulta),
+    minhaFicha: () => socket.emitWithAck("minhaFicha"),
     digitar: async (linha) => {
       const leitura = lerLinha(linha);
       // Uma linha que não é comando é uma recusa como outra qualquer para quem
