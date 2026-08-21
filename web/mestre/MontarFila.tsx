@@ -48,7 +48,9 @@ export const MontarFila = ({
       <header>
         <h2>Fila de iniciativa</h2>
         <form method="dialog">
-          <button aria-label="Fechar">×</button>
+          <button type="submit" aria-label="Fechar">
+            ×
+          </button>
         </form>
       </header>
 
@@ -60,6 +62,7 @@ export const MontarFila = ({
               {iniciativa === null ? "—" : iniciativa.resultado}
             </span>
             <button
+              type="button"
               onClick={() => mover(posicao, posicao - 1)}
               disabled={posicao === 0}
               aria-label={`Subir ${nomeDe(estado, combate, participante)}`}
@@ -67,6 +70,7 @@ export const MontarFila = ({
               ↑
             </button>
             <button
+              type="button"
               onClick={() => mover(posicao, posicao + 1)}
               disabled={posicao === linhas.length - 1}
               aria-label={`Descer ${nomeDe(estado, combate, participante)}`}
@@ -79,6 +83,7 @@ export const MontarFila = ({
 
       <div className="acoes">
         <button
+          type="button"
           onClick={() =>
             void publicar(linhas.map(({ participante }) => participante))
           }

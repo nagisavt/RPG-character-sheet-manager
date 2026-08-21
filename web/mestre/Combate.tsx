@@ -40,7 +40,10 @@ export const Combate = ({
   if (estado.combate === null) {
     return (
       <section className="combate">
-        <button onClick={() => void tentar({ tipo: "iniciarCombate" })}>
+        <button
+          type="button"
+          onClick={() => void tentar({ tipo: "iniciarCombate" })}
+        >
           iniciar Combate
         </button>
         {recusa !== null && <p className="resposta recusada">{recusa}</p>}
@@ -94,10 +97,13 @@ export const Combate = ({
       />
 
       <div className="acoes">
-        <button onClick={() => montar.current?.showModal()}>
+        <button type="button" onClick={() => montar.current?.showModal()}>
           {combate.fila === null ? "montar a Fila" : "remontar a Fila"}
         </button>
-        <button onClick={() => void tentar({ tipo: "encerrarCombate" })}>
+        <button
+          type="button"
+          onClick={() => void tentar({ tipo: "encerrarCombate" })}
+        >
           encerrar Combate
         </button>
       </div>
@@ -160,7 +166,9 @@ const MontarFila = ({
       <header>
         <h2>Fila de iniciativa</h2>
         <form method="dialog">
-          <button aria-label="Fechar">×</button>
+          <button type="submit" aria-label="Fechar">
+            ×
+          </button>
         </form>
       </header>
 
@@ -177,6 +185,7 @@ const MontarFila = ({
                 {rolou === undefined ? "—" : rolou.resultado}
               </span>
               <button
+                type="button"
                 onClick={() => mover(posicao, posicao - 1)}
                 disabled={posicao === 0}
                 aria-label={`Subir ${nomeDe(estado, combate, participante)}`}
@@ -184,6 +193,7 @@ const MontarFila = ({
                 ↑
               </button>
               <button
+                type="button"
                 onClick={() => mover(posicao, posicao + 1)}
                 disabled={posicao === atual.length - 1}
                 aria-label={`Descer ${nomeDe(estado, combate, participante)}`}
@@ -196,7 +206,7 @@ const MontarFila = ({
       </ol>
 
       <div className="acoes">
-        <button onClick={() => void publicar(atual)}>
+        <button type="button" onClick={() => void publicar(atual)}>
           publicar para a Mesa
         </button>
       </div>

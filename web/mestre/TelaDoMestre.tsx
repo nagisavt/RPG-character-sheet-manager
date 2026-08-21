@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type Ref } from "react";
+import { useEffect, useRef, useState, type FormEvent, type Ref } from "react";
 import type { Resposta } from "../../shared/comandos.js";
 import { VERBETES } from "../../shared/linha-de-comando.js";
 import type { Personagem } from "../../shared/tipos.js";
@@ -86,6 +86,12 @@ const Portao = ({
   recusa: string | null;
 }) => {
   const [senha, setSenha] = useState("");
+  const campo = useRef<HTMLInputElement>(null);
+
+  // O portão é a primeira tela do mestre e só tem um campo: o cursor já nasce
+  // dentro dele, para a senha ser digitada sem um clique antes. Era um
+  // `autofocus` no `<input>`, e é a mesma coisa feita por nós.
+  useEffect(() => campo.current?.focus(), []);
 
   return (
     <main className="portao">
@@ -101,7 +107,7 @@ const Portao = ({
           value={senha}
           onChange={(evento) => setSenha(evento.target.value)}
           placeholder="senha do mestre"
-          autoFocus
+          ref={campo}
         />
         <button type="submit" disabled={entrando}>
           {entrando ? "entrando…" : "entrar"}
@@ -142,6 +148,7 @@ const Painel = ({
     <div className="passos">
       {PASSOS.map((passo) => (
         <button
+          type="button"
           key={passo}
           onClick={() => alterar(passo)}
           aria-label={`${passo < 0 ? "Dano" : "Cura"} de ${Math.abs(passo)} em ${personagem.nome}`}
@@ -200,7 +207,9 @@ const Ajuda = ({ ref }: { ref: Ref<HTMLDialogElement> }) => (
     <header>
       <h2>Comandos</h2>
       <form method="dialog">
-        <button aria-label="Fechar">×</button>
+        <button type="submit" aria-label="Fechar">
+          ×
+        </button>
       </form>
     </header>
 

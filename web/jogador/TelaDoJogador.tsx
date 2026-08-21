@@ -125,7 +125,7 @@ const Escolha = ({
     <ul>
       {personagens.map((personagem) => (
         <li key={personagem.id}>
-          <button onClick={() => escolher(personagem.id)}>
+          <button type="button" onClick={() => escolher(personagem.id)}>
             <ImagemOuRotulo
               className="retrato"
               caminho={`/personagens/${personagem.id}.png`}
@@ -184,11 +184,13 @@ const Hub = ({
       <Iniciativa personagem={personagem} combate={combate} enviar={enviar} />
 
       <nav className="tres">
-        <button onClick={() => inventario.current?.showModal()}>
+        <button type="button" onClick={() => inventario.current?.showModal()}>
           Inventário
         </button>
-        <button onClick={() => magias.current?.showModal()}>Magias</button>
-        <button onClick={() => notas.current?.showModal()}>
+        <button type="button" onClick={() => magias.current?.showModal()}>
+          Magias
+        </button>
+        <button type="button" onClick={() => notas.current?.showModal()}>
           Bloco de notas
         </button>
       </nav>
@@ -247,6 +249,7 @@ const Iniciativa = ({
   enviar: (comando: Comando) => Promise<Resposta>;
 }) => {
   const popup = useRef<HTMLDialogElement>(null);
+  const campo = useRef<HTMLInputElement>(null);
   const [d20, setD20] = useState("");
   const [recusa, setRecusa] = useState<string | null>(null);
 
@@ -263,7 +266,10 @@ const Iniciativa = ({
   useEffect(() => {
     // O Combate começou e a mesa está esperando por este celular. Abrir sozinho
     // é o ponto: ninguém devia ter que procurar onde digitar.
-    if (esperando) popup.current?.showModal();
+    if (esperando) {
+      popup.current?.showModal();
+      campo.current?.focus();
+    }
   }, [esperando]);
 
   const abrir = () => {
@@ -271,13 +277,17 @@ const Iniciativa = ({
     // naquela vez, e ficar na tela faria o mestre achar que falhou de novo.
     setRecusa(null);
     popup.current?.showModal();
+    // O `<dialog>` que abre já deixa o cursor no campo: quem está com o d20 na
+    // mão digita o número sem procurar onde. Antes isso era um `autofocus` no
+    // `<input>`; agora é aqui, no mesmo instante em que a caixa aparece.
+    campo.current?.focus();
   };
 
   if (combate === null) return null;
 
   return (
     <>
-      <button className="faixa" onClick={abrir}>
+      <button type="button" className="faixa" onClick={abrir}>
         {minha === null ? (
           "Declare sua iniciativa"
         ) : (
@@ -316,7 +326,7 @@ const Iniciativa = ({
             inputMode="numeric"
             placeholder="14"
             aria-label="O d20 que saiu"
-            autoFocus
+            ref={campo}
           />
           <button type="submit">declarar</button>
         </form>
@@ -405,7 +415,7 @@ const Prateleira = ({
             // A mesma chave pode aparecer duas vezes na Ficha — duas pilhas da
             // mesma corda —, então quem separa as linhas é a ordem, não a chave.
             <li key={`${ordem}-${chave}`}>
-              <button onClick={() => setAberta(chave)}>
+              <button type="button" onClick={() => setAberta(chave)}>
                 <ImagemOuRotulo
                   className="retrato"
                   caminho={`/${pasta}/${chave}.png`}
@@ -474,6 +484,7 @@ const BlocoDeNotas = ({
           {recusa ?? (salvo ? "salvo" : "não salvo")}
         </span>
         <button
+          type="button"
           disabled={salvo || salvando}
           onClick={async () => {
             setSalvando(true);
@@ -514,7 +525,12 @@ const Modal = ({
   <dialog className="modal" ref={ref}>
     <header>
       {voltar ? (
-        <button className="voltar" onClick={voltar} aria-label="Voltar">
+        <button
+          type="button"
+          className="voltar"
+          onClick={voltar}
+          aria-label="Voltar"
+        >
           ‹
         </button>
       ) : (
@@ -522,7 +538,9 @@ const Modal = ({
       )}
       <h2>{titulo}</h2>
       <form method="dialog">
-        <button aria-label="Fechar">×</button>
+        <button type="submit" aria-label="Fechar">
+          ×
+        </button>
       </form>
     </header>
     {children}
