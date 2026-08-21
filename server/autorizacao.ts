@@ -36,9 +36,15 @@ const QUEM_PODE: Record<TipoDeComando, Identidade["como"]> = {
   declararIniciativaDoMonstro: "mestre",
 };
 
-export const autorizar = (identidade: Identidade, tipo: TipoDeComando): Resposta => {
+export const autorizar = (
+  identidade: Identidade,
+  tipo: TipoDeComando,
+): Resposta => {
   if (identidade.como === "mesa") {
-    return { aceito: false, motivo: "A tela da Mesa só lê: ela não envia Comandos" };
+    return {
+      aceito: false,
+      motivo: "A tela da Mesa só lê: ela não envia Comandos",
+    };
   }
   // Um papel por Comando, e não uma lista: hoje toda linha da tabela tem um só,
   // e uma lista seria a forma prometendo um caso que não existe.

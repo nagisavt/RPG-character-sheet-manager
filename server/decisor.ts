@@ -26,27 +26,44 @@ export type Decisao = { eventos: EventoNovo[] } | { recusa: string };
  * da identidade do socket: um Comando que carregasse o próprio autor seria um
  * jogador podendo se declarar mestre.
  */
-export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao => {
+export const decisor = (
+  estado: Estado,
+  comando: Comando,
+  autor: Autor,
+): Decisao => {
   switch (comando.tipo) {
     case "iniciarSessao":
       if (estado.sessaoAtiva) return { recusa: "A Sessão já está em curso" };
-      return { eventos: [{ tipo: "SessaoIniciada", autor, audiencia: ["publico"] }] };
+      return {
+        eventos: [{ tipo: "SessaoIniciada", autor, audiencia: ["publico"] }],
+      };
 
     case "finalizarSessao":
       if (!estado.sessaoAtiva) return { recusa: "Nenhuma Sessão em curso" };
-      return { eventos: [{ tipo: "SessaoFinalizada", autor, audiencia: ["publico"] }] };
+      return {
+        eventos: [{ tipo: "SessaoFinalizada", autor, audiencia: ["publico"] }],
+      };
 
     case "trocarCena": {
       // O nome vira caminho de arquivo e URL. Um `../` daqui sairia de
       // `assets/cenas/` e ficaria gravado para sempre num Log que não se apaga.
       if (!/^[a-z0-9-]+$/.test(comando.cena)) {
-        return { recusa: `'${comando.cena}' não é nome de Cena: só minúsculas, números e hífen` };
+        return {
+          recusa: `'${comando.cena}' não é nome de Cena: só minúsculas, números e hífen`,
+        };
       }
       if (estado.cena === comando.cena) {
         return { recusa: `A Cena '${comando.cena}' já está no ar` };
       }
       return {
-        eventos: [{ tipo: "CenaTrocada", cena: comando.cena, autor, audiencia: ["publico"] }],
+        eventos: [
+          {
+            tipo: "CenaTrocada",
+            cena: comando.cena,
+            autor,
+            audiencia: ["publico"],
+          },
+        ],
       };
     }
 
@@ -88,7 +105,9 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
       // Mesmo motivo do `alterarVida`: um `NaN` gravado num Log append-only não
       // tem como ser corrigido depois, e envenena todo replay da campanha.
       if (!Number.isInteger(comando.diferenca)) {
-        return { recusa: "A diferença de Moedas precisa ser um número inteiro" };
+        return {
+          recusa: "A diferença de Moedas precisa ser um número inteiro",
+        };
       }
       // `null` é o sigilo da projeção, e o decisor roda no servidor, sobre o
       // estado inteiro — aqui ele nunca aparece. A guarda existe para que o dia
@@ -120,12 +139,17 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
     }
 
     case "iniciarCombate":
-      if (estado.combate !== null) return { recusa: "O Combate já está em curso" };
-      return { eventos: [{ tipo: "CombateIniciado", autor, audiencia: ["publico"] }] };
+      if (estado.combate !== null)
+        return { recusa: "O Combate já está em curso" };
+      return {
+        eventos: [{ tipo: "CombateIniciado", autor, audiencia: ["publico"] }],
+      };
 
     case "encerrarCombate":
       if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
-      return { eventos: [{ tipo: "CombateEncerrado", autor, audiencia: ["publico"] }] };
+      return {
+        eventos: [{ tipo: "CombateEncerrado", autor, audiencia: ["publico"] }],
+      };
 
     case "publicarFila": {
       if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
@@ -168,7 +192,8 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
     }
 
     case "declararIniciativa": {
-      if (autor.tipo !== "jogador") return { recusa: "A iniciativa é de quem rolou o dado" };
+      if (autor.tipo !== "jogador")
+        return { recusa: "A iniciativa é de quem rolou o dado" };
       const personagem = estado.personagens[autor.personagem];
       if (personagem === undefined) {
         return { recusa: `Personagem desconhecido: ${autor.personagem}` };
@@ -187,7 +212,9 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
     }
 
     case "declararIniciativaDoMonstro": {
-      const monstro = estado.combate?.monstros.find((qual) => qual.nome === comando.nome);
+      const monstro = estado.combate?.monstros.find(
+        (qual) => qual.nome === comando.nome,
+      );
       if (monstro === undefined) {
         return { recusa: `Monstro não declarado: ${comando.nome}` };
       }
@@ -233,7 +260,9 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
       // Zero é válido: é o efeito que acabou. Negativo não — tirar vida é
       // `/dano`, e um pote negativo é um estado que não existe.
       if (!Number.isInteger(comando.vidaBonus) || comando.vidaBonus < 0) {
-        return { recusa: "A Vida bônus precisa ser um inteiro de zero para cima" };
+        return {
+          recusa: "A Vida bônus precisa ser um inteiro de zero para cima",
+        };
       }
 
       return {

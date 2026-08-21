@@ -13,7 +13,12 @@ export const misselMagico: Entrada = {
   chave: "srd-2024_magic-missile",
   nome: "Míssil Mágico",
   descricao: "Três dardos de energia, cada um com 1d4+1 de dano de força.",
-  detalhes: { nivel: 1, escola: "Evocação", concentracao: false, ritual: false },
+  detalhes: {
+    nivel: 1,
+    escola: "Evocação",
+    concentracao: false,
+    ritual: false,
+  },
 };
 
 export const corda: Entrada = {

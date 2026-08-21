@@ -1,5 +1,11 @@
 import { mesmo } from "./combate.js";
-import type { Combate, Estado, EventoNovo, Personagem, PersonagemId } from "./tipos.js";
+import type {
+  Combate,
+  Estado,
+  EventoNovo,
+  Personagem,
+  PersonagemId,
+} from "./tipos.js";
 
 /**
  * `reducer(estado, evento) => estado`. Puro: sem banco, sem socket, sem relógio
@@ -22,7 +28,10 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
     case "CombateIniciado":
       // Começa vazio: os Monstros, as iniciativas e a Fila chegam depois, cada
       // um no seu Evento. Iniciar duas vezes é recusado pelo decisor, não aqui.
-      return { ...estado, combate: { monstros: [], iniciativas: [], fila: null } };
+      return {
+        ...estado,
+        combate: { monstros: [], iniciativas: [], fila: null },
+      };
 
     case "CombateEncerrado":
       // O Combate sai do estado, e o Log fica: a noite continua sendo lida.
@@ -31,10 +40,16 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
     case "FilaPublicada":
       // Substitui a Fila inteira. Publicar de novo, com o reforço declarado no
       // meio do Combate, é a mesma coisa que publicar a primeira vez.
-      return comCombate(estado, (combate) => ({ ...combate, fila: evento.fila }));
+      return comCombate(estado, (combate) => ({
+        ...combate,
+        fila: evento.fila,
+      }));
 
     case "MonstrosDeclarados":
-      return comCombate(estado, (combate) => ({ ...combate, monstros: evento.monstros }));
+      return comCombate(estado, (combate) => ({
+        ...combate,
+        monstros: evento.monstros,
+      }));
 
     case "IniciativaDeclarada":
       return comCombate(estado, (combate) => ({
@@ -45,7 +60,11 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
           ...combate.iniciativas.filter(
             (antiga) => !mesmo(antiga.participante, evento.participante),
           ),
-          { participante: evento.participante, d20: evento.d20, resultado: evento.resultado },
+          {
+            participante: evento.participante,
+            d20: evento.d20,
+            resultado: evento.resultado,
+          },
         ],
       }));
 
@@ -63,16 +82,22 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
     case "VidaBonusConcedida":
       // Substitui o valor anterior. Somar seria o app decidindo que dois efeitos
       // se empilham, que é regra de mesa e não é dele (ADR-0001).
-      return comPersonagem(estado, evento.personagem, () => ({ vidaBonus: evento.vidaBonus }));
+      return comPersonagem(estado, evento.personagem, () => ({
+        vidaBonus: evento.vidaBonus,
+      }));
 
     case "MoedasAlteradas":
       // Atribui, não acumula (ADR-0003), do mesmo jeito que a vida.
-      return comPersonagem(estado, evento.personagem, () => ({ moedas: evento.moedas }));
+      return comPersonagem(estado, evento.personagem, () => ({
+        moedas: evento.moedas,
+      }));
 
     case "AnotacaoAtualizada":
       // Atribui a Anotação inteira. O cliente que não tinha direito de ver este
       // Evento não chega aqui: ele nunca o recebeu.
-      return comPersonagem(estado, evento.personagem, () => ({ anotacao: evento.texto }));
+      return comPersonagem(estado, evento.personagem, () => ({
+        anotacao: evento.texto,
+      }));
   }
 };
 
@@ -81,8 +106,13 @@ export const reducer = (estado: Estado, evento: EventoNovo): Estado => {
  * mesmo jeito que o Evento de um personagem que saiu das Fichas: o decisor não
  * deixa isso acontecer, e se um dia deixar, o replay não quebra por causa disso.
  */
-const comCombate = (estado: Estado, mudanca: (combate: Combate) => Combate): Estado =>
-  estado.combate === null ? estado : { ...estado, combate: mudanca(estado.combate) };
+const comCombate = (
+  estado: Estado,
+  mudanca: (combate: Combate) => Combate,
+): Estado =>
+  estado.combate === null
+    ? estado
+    : { ...estado, combate: mudanca(estado.combate) };
 
 /**
  * Um personagem trocado, e o resto do estado igual.
@@ -101,10 +131,15 @@ const comPersonagem = (
 
   return {
     ...estado,
-    personagens: { ...estado.personagens, [id]: { ...personagem, ...mudanca(personagem) } },
+    personagens: {
+      ...estado.personagens,
+      [id]: { ...personagem, ...mudanca(personagem) },
+    },
   };
 };
 
 /** O estado da Mesa é o Log dobrado sobre a posição inicial. */
-export const reconstruir = (inicial: Estado, eventos: readonly EventoNovo[]): Estado =>
-  eventos.reduce(reducer, inicial);
+export const reconstruir = (
+  inicial: Estado,
+  eventos: readonly EventoNovo[],
+): Estado => eventos.reduce(reducer, inicial);

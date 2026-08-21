@@ -37,4 +37,6 @@ const Portaria = () => (
   </main>
 );
 
-createRoot(document.getElementById("raiz")!).render(<StrictMode>{tela()}</StrictMode>);
+createRoot(document.getElementById("raiz")!).render(
+  <StrictMode>{tela()}</StrictMode>,
+);

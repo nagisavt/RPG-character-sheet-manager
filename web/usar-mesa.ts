@@ -2,7 +2,11 @@ import { useCallback, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type { Consulta, Entrada } from "../shared/catalogo.js";
 import type { Comando, Resposta } from "../shared/comandos.js";
-import type { Credencial, Snapshot, Transmissao } from "../shared/identidade.js";
+import type {
+  Credencial,
+  Snapshot,
+  Transmissao,
+} from "../shared/identidade.js";
 import { lerLinha } from "../shared/linha-de-comando.js";
 import { reducer } from "../shared/reducer.js";
 import { MESA_ID, type Estado, type Ficha } from "../shared/tipos.js";
@@ -39,7 +43,9 @@ export const usarMesa = () => {
     });
 
     // Na (re)conexão vem o snapshot completo já filtrado, e depois só deltas.
-    ligado.on("snapshot", ({ estado }: Snapshot) => setLigacao({ situacao: "na mesa", estado }));
+    ligado.on("snapshot", ({ estado }: Snapshot) =>
+      setLigacao({ situacao: "na mesa", estado }),
+    );
 
     ligado.on("transmissao", ({ evento }: Transmissao) => {
       if (evento === null) return;
@@ -87,7 +93,8 @@ export const usarMesa = () => {
    * Ficha do colega.
    */
   const minhaFicha = useCallback(
-    async (): Promise<Ficha | null> => (await socket.current?.emitWithAck("minhaFicha")) ?? null,
+    async (): Promise<Ficha | null> =>
+      (await socket.current?.emitWithAck("minhaFicha")) ?? null,
     [],
   );
 

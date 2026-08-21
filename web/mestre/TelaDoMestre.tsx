@@ -33,7 +33,9 @@ export const TelaDoMestre = () => {
     <main className="mestre">
       <header>
         <h1>Mesa</h1>
-        <span className={ligacao.estado.sessaoAtiva ? "sessao ativa" : "sessao"}>
+        <span
+          className={ligacao.estado.sessaoAtiva ? "sessao ativa" : "sessao"}
+        >
           {ligacao.estado.sessaoAtiva ? "Sessão em curso" : "Fora de sessão"}
         </span>
       </header>
@@ -45,7 +47,11 @@ export const TelaDoMestre = () => {
             personagem={personagem}
             alterar={async (diferenca) =>
               setResposta(
-                await enviar({ tipo: "alterarVida", personagem: personagem.id, diferenca }),
+                await enviar({
+                  tipo: "alterarVida",
+                  personagem: personagem.id,
+                  diferenca,
+                }),
               )
             }
           />
@@ -54,10 +60,14 @@ export const TelaDoMestre = () => {
 
       <Combate estado={ligacao.estado} enviar={enviar} />
 
-      <LinhaDeComando digitar={async (linha) => setResposta(await digitar(linha))} />
+      <LinhaDeComando
+        digitar={async (linha) => setResposta(await digitar(linha))}
+      />
 
       {resposta !== null && (
-        <p className={resposta.aceito ? "resposta aceita" : "resposta recusada"}>
+        <p
+          className={resposta.aceito ? "resposta aceita" : "resposta recusada"}
+        >
           {resposta.aceito ? "aceito" : resposta.motivo}
         </p>
       )}
@@ -166,7 +176,11 @@ const LinhaDeComando = ({ digitar }: { digitar: (linha: string) => void }) => {
           spellCheck={false}
         />
         <button type="submit">enviar</button>
-        <button type="button" onClick={() => ajuda.current?.showModal()} aria-label="Comandos">
+        <button
+          type="button"
+          onClick={() => ajuda.current?.showModal()}
+          aria-label="Comandos"
+        >
           ?
         </button>
       </form>
@@ -207,8 +221,9 @@ const Ajuda = ({ ref }: { ref: Ref<HTMLDialogElement> }) => (
     </dl>
 
     <p className="apagado">
-      A quantidade vai sem sinal: quem diz se a vida sobe ou desce é o verbo. Os botões de cada
-      personagem fazem o mesmo que <code>/dano</code> e <code>/cura</code>.
+      A quantidade vai sem sinal: quem diz se a vida sobe ou desce é o verbo. Os
+      botões de cada personagem fazem o mesmo que <code>/dano</code> e{" "}
+      <code>/cura</code>.
     </p>
   </dialog>
 );

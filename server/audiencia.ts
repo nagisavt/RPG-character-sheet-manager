@@ -1,6 +1,11 @@
 import { mesmo } from "../shared/combate.js";
 import type { Identidade } from "../shared/identidade.js";
-import type { Audiencia, Estado, EventoNovo, Personagem } from "../shared/tipos.js";
+import type {
+  Audiencia,
+  Estado,
+  EventoNovo,
+  Personagem,
+} from "../shared/tipos.js";
 
 /**
  * A audiência é **gravada** no Evento, não calculada no broadcast: a
@@ -12,12 +17,15 @@ import type { Audiencia, Estado, EventoNovo, Personagem } from "../shared/tipos.
 export const podeVer = (evento: EventoNovo, identidade: Identidade): boolean =>
   // A tela de Log do mestre não filtra nada: só ele a abre, e ela mostra o Log
   // inteiro, incluindo o que é privado dos jogadores.
-  identidade.como === "mestre" || evento.audiencia.some((alvo) => alcanca(alvo, identidade));
+  identidade.como === "mestre" ||
+  evento.audiencia.some((alvo) => alcanca(alvo, identidade));
 
 const alcanca = (alvo: Audiencia, identidade: Identidade): boolean => {
   if (alvo === "publico") return true;
   if (alvo === "mestre") return identidade.como === "mestre";
-  return identidade.como === "jogador" && identidade.personagem === alvo.privado;
+  return (
+    identidade.como === "jogador" && identidade.personagem === alvo.privado
+  );
 };
 
 /**
@@ -49,7 +57,11 @@ export const projetar = (estado: Estado, identidade: Identidade): Estado => {
             ...estado.combate,
             iniciativas: estado.combate.iniciativas.filter(
               (qual) =>
-                meu !== null && mesmo(qual.participante, { tipo: "personagem", personagem: meu }),
+                meu !== null &&
+                mesmo(qual.participante, {
+                  tipo: "personagem",
+                  personagem: meu,
+                }),
             ),
           },
     personagens: Object.fromEntries(

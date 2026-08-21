@@ -24,7 +24,9 @@ body {
   margin: 0;
   background: var(--fundo);
   color: var(--letra);
-  font: 16px/1.5 system-ui, sans-serif;
+  font:
+    16px / 1.5 system-ui,
+    sans-serif;
 }
 
 main {

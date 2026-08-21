@@ -6,7 +6,9 @@ import type { Estado, Ficha } from "./tipos.js";
  */
 export const estadoInicial = (fichas: readonly Ficha[]): Estado => ({
   sessaoAtiva: false,
-  personagens: Object.fromEntries(fichas.map((ficha) => [ficha.id, personagemDe(ficha)])),
+  personagens: Object.fromEntries(
+    fichas.map((ficha) => [ficha.id, personagemDe(ficha)]),
+  ),
   cena: null,
   // Fora de Combate. Ele nasce de um `CombateIniciado` e some quando o mestre
   // encerra — nunca da Ficha, que não sabe de que noite se está falando.

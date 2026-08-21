@@ -20,8 +20,12 @@ export const abrirCatalogo = (caminho: string): Catalogo => {
   const banco = new DatabaseSync(caminho);
   criarEsquema(banco);
 
-  const porChave = banco.prepare("SELECT * FROM catalogo WHERE tipo = ? AND chave = ?");
-  const totais = banco.prepare("SELECT tipo, COUNT(*) AS total FROM catalogo GROUP BY tipo");
+  const porChave = banco.prepare(
+    "SELECT * FROM catalogo WHERE tipo = ? AND chave = ?",
+  );
+  const totais = banco.prepare(
+    "SELECT tipo, COUNT(*) AS total FROM catalogo GROUP BY tipo",
+  );
 
   return {
     consultar: ({ tipo, chave }) => {
@@ -30,9 +34,15 @@ export const abrirCatalogo = (caminho: string): Catalogo => {
     },
 
     contar: () => {
-      const zerado: Record<TipoDoCatalogo, number> = { magia: 0, item: 0, monstro: 0 };
+      const zerado: Record<TipoDoCatalogo, number> = {
+        magia: 0,
+        item: 0,
+        monstro: 0,
+      };
       for (const linha of totais.all()) {
-        zerado[String(linha["tipo"]) as TipoDoCatalogo] = Number(linha["total"]);
+        zerado[String(linha["tipo"]) as TipoDoCatalogo] = Number(
+          linha["total"],
+        );
       }
       return zerado;
     },
@@ -60,7 +70,10 @@ export const criarEsquema = (banco: DatabaseSync): void => {
 };
 
 /** Usado pelo seed e pelo harness — nunca pelo servidor, que só lê. */
-export const semear = (banco: DatabaseSync, entradas: readonly Entrada[]): void => {
+export const semear = (
+  banco: DatabaseSync,
+  entradas: readonly Entrada[],
+): void => {
   criarEsquema(banco);
   const inserir = banco.prepare(
     "INSERT OR REPLACE INTO catalogo (tipo, chave, nome, descricao, detalhes) VALUES (?, ?, ?, ?, ?)",

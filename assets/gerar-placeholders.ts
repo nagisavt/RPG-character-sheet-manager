@@ -51,7 +51,8 @@ const png = (lado: number, rotulo: string): Buffer => {
   };
 
   const linhas = quebrar(rotulo, POR_LINHA);
-  const colunas = Math.max(...linhas.map((linha) => linha.length)) * (LARGURA + 1) - 1;
+  const colunas =
+    Math.max(...linhas.map((linha) => linha.length)) * (LARGURA + 1) - 1;
   // Oito décimos do lado: o rótulo respira em vez de encostar na borda.
   const escala = Math.max(1, Math.floor((lado * 0.8) / colunas));
 
@@ -115,7 +116,8 @@ const TABELA = Array.from({ length: 256 }, (_, byte) => {
 
 const crc32 = (dados: Buffer): number => {
   let valor = 0xffffffff;
-  for (const byte of dados) valor = TABELA[(valor ^ byte) & 0xff]! ^ (valor >>> 8);
+  for (const byte of dados)
+    valor = TABELA[(valor ^ byte) & 0xff]! ^ (valor >>> 8);
   return (valor ^ 0xffffffff) >>> 0;
 };
 
@@ -151,4 +153,6 @@ for (const [caminho, { lado, rotulo }] of pedidos) {
   }
 }
 
-console.log(`${criados} placeholder(s) criado(s), de ${pedidos.size} asset(s) que a Mesa pede.`);
+console.log(
+  `${criados} placeholder(s) criado(s), de ${pedidos.size} asset(s) que a Mesa pede.`,
+);

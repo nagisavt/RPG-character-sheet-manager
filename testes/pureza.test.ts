@@ -16,7 +16,10 @@ import { describe, expect, it } from "vitest";
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const semComentarios = async (caminho: string) =>
-  (await readFile(join(raiz, caminho), "utf8")).replaceAll(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
+  (await readFile(join(raiz, caminho), "utf8")).replaceAll(
+    /\/\*[\s\S]*?\*\/|\/\/.*/g,
+    "",
+  );
 
 const IMPUREZAS = [
   { nome: "relógio", padrao: /\bDate\b|performance\.now|hrtime/ },
@@ -41,14 +44,18 @@ describe("nada de rede durante a Sessão", () => {
     expect(fontes).toContain(SEED);
 
     for (const caminho of fontes.filter((fonte) => fonte !== SEED)) {
-      expect(await semComentarios(caminho), caminho).not.toMatch(/\bfetch\s*\(|https?:\/\//);
+      expect(await semComentarios(caminho), caminho).not.toMatch(
+        /\bfetch\s*\(|https?:\/\//,
+      );
     }
   });
 });
 
 const listar = async (pasta: string): Promise<string[]> => {
   const arquivos = await readdir(join(raiz, pasta), { recursive: true });
-  return arquivos.filter((arquivo) => arquivo.endsWith(".ts")).map((arquivo) => posix.join(pasta, arquivo.replaceAll("\\", "/")));
+  return arquivos
+    .filter((arquivo) => arquivo.endsWith(".ts"))
+    .map((arquivo) => posix.join(pasta, arquivo.replaceAll("\\", "/")));
 };
 
 /**
@@ -72,25 +79,32 @@ describe("ninguém rola dado pela mesa", () => {
   });
 });
 
-describe.each(["shared/reducer.ts", "server/decisor.ts"])("%s é puro", (caminho) => {
-  it.each(IMPUREZAS)("não tem $nome", async ({ padrao }) => {
-    expect(await semComentarios(caminho)).not.toMatch(padrao);
-  });
+describe.each(["shared/reducer.ts", "server/decisor.ts"])(
+  "%s é puro",
+  (caminho) => {
+    it.each(IMPUREZAS)("não tem $nome", async ({ padrao }) => {
+      expect(await semComentarios(caminho)).not.toMatch(padrao);
+    });
 
-  /**
-   * Banco e socket não são procurados pelo nome do módulo: o que se exige é que
-   * não exista porta de entrada para eles. Importar só de `shared/` — que é puro
-   * por construção — é a garantia, e ela não depende de adivinhar o nome do
-   * módulo impuro da vez.
-   */
-  it("só importa de shared/", async () => {
-    const fonte = await semComentarios(caminho);
-    const origens = [...fonte.matchAll(/from\s+"([^"]+)"/g)].map(([, origem]) => origem!);
+    /**
+     * Banco e socket não são procurados pelo nome do módulo: o que se exige é que
+     * não exista porta de entrada para eles. Importar só de `shared/` — que é puro
+     * por construção — é a garantia, e ela não depende de adivinhar o nome do
+     * módulo impuro da vez.
+     */
+    it("só importa de shared/", async () => {
+      const fonte = await semComentarios(caminho);
+      const origens = [...fonte.matchAll(/from\s+"([^"]+)"/g)].map(
+        ([, origem]) => origem!,
+      );
 
-    expect(origens.length).toBeGreaterThan(0);
-    for (const origem of origens) {
-      const alvo = posix.normalize(posix.join(posix.dirname(caminho), origem));
-      expect(alvo, `${caminho} importa '${origem}'`).toMatch(/^shared\//);
-    }
-  });
-});
+      expect(origens.length).toBeGreaterThan(0);
+      for (const origem of origens) {
+        const alvo = posix.normalize(
+          posix.join(posix.dirname(caminho), origem),
+        );
+        expect(alvo, `${caminho} importa '${origem}'`).toMatch(/^shared\//);
+      }
+    });
+  },
+);

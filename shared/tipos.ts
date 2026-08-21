@@ -9,7 +9,9 @@ export type PersonagemId = string;
 export const MESA_ID = "mesa-unica";
 
 /** Quem criou o Evento. Não existe autor `sistema`: todo Evento nasce de um Comando humano. */
-export type Autor = { tipo: "mestre" } | { tipo: "jogador"; personagem: PersonagemId };
+export type Autor =
+  | { tipo: "mestre" }
+  | { tipo: "jogador"; personagem: PersonagemId };
 
 /** Quem pode ver um Evento. É uma lista porque um Evento pode ser do mestre *e* de um personagem. */
 export type Audiencia = "publico" | "mestre" | { privado: PersonagemId };
@@ -260,7 +262,11 @@ export type Combate = {
   fila: readonly Participante[] | null;
 };
 
-export type Iniciativa = { participante: Participante; d20: number; resultado: number };
+export type Iniciativa = {
+  participante: Participante;
+  d20: number;
+  resultado: number;
+};
 
 /** Moedas entram aqui na issue que as traz. */
 export type Personagem = {

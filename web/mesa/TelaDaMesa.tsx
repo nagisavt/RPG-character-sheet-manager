@@ -22,7 +22,9 @@ export const TelaDaMesa = () => {
     return (
       <div className="tv">
         <p className="avisando">
-          {ligacao.situacao === "recusado" ? ligacao.motivo : "Ligando na Mesa…"}
+          {ligacao.situacao === "recusado"
+            ? ligacao.motivo
+            : "Ligando na Mesa…"}
         </p>
       </div>
     );
@@ -46,7 +48,9 @@ export const TelaDaMesa = () => {
           <Barra
             key={personagem.id}
             personagem={personagem}
-            maiorDaMesa={Math.max(...personagens.map((outro) => outro.vidaMaxima))}
+            maiorDaMesa={Math.max(
+              ...personagens.map((outro) => outro.vidaMaxima),
+            )}
           />
         ))}
       </ul>
@@ -68,7 +72,13 @@ const Cena = ({ cena }: { cena: string | null }) => {
     );
   }
 
-  return <ImagemOuRotulo className="cena" caminho={`/cenas/${cena}.png`} rotulo={cena} />;
+  return (
+    <ImagemOuRotulo
+      className="cena"
+      caminho={`/cenas/${cena}.png`}
+      rotulo={cena}
+    />
+  );
 };
 
 /**
@@ -82,7 +92,9 @@ const Fila = ({ estado, combate }: { estado: Estado; combate: Combate }) => (
   <div className="fila">
     <ol>
       {(combate.fila ?? []).map((participante) => (
-        <li key={chaveDe(participante)}>{nomeDe(estado, combate, participante)}</li>
+        <li key={chaveDe(participante)}>
+          {nomeDe(estado, combate, participante)}
+        </li>
       ))}
     </ol>
   </div>
@@ -97,7 +109,13 @@ const Fila = ({ estado, combate }: { estado: Estado; combate: Combate }) => (
  * A Vida bônus é uma segunda barra, branca, logo abaixo — e só aparece quando
  * existe: quem não tem nenhuma não ganha uma faixa vazia para a mesa decifrar.
  */
-const Barra = ({ personagem, maiorDaMesa }: { personagem: Personagem; maiorDaMesa: number }) => (
+const Barra = ({
+  personagem,
+  maiorDaMesa,
+}: {
+  personagem: Personagem;
+  maiorDaMesa: number;
+}) => (
   <li style={{ width: `${(personagem.vidaMaxima / maiorDaMesa) * 100}%` }}>
     <div className="nome">
       <span>{personagem.nome}</span>

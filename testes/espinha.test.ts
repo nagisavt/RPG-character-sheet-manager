@@ -1,6 +1,10 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { catalogoDeExemplo, corda, misselMagico } from "../harness/catalogo-exemplo.js";
+import {
+  catalogoDeExemplo,
+  corda,
+  misselMagico,
+} from "../harness/catalogo-exemplo.js";
 import { faltam, nomeDe } from "../shared/combate.js";
 import { criarMesa, type Mesa } from "../harness/criar-mesa.js";
 import { elara, fichasDeExemplo, thorin } from "../harness/fichas-exemplo.js";
@@ -32,7 +36,10 @@ it("a Sessão vai até o fim e os dois Eventos ficam no Log, carimbados em ordem
   await mestre.enviar({ tipo: "finalizarSessao" });
 
   expect(tv.estado.sessaoAtiva).toBe(false);
-  expect(tv.eventos.map((evento) => evento.tipo)).toEqual(["SessaoIniciada", "SessaoFinalizada"]);
+  expect(tv.eventos.map((evento) => evento.tipo)).toEqual([
+    "SessaoIniciada",
+    "SessaoFinalizada",
+  ]);
 
   // O decisor devolve o corpo do Evento; quem carimba `id` e `timestamp` é o store.
   expect(tv.eventos.map((evento) => evento.id)).toEqual([1, 2]);
@@ -50,7 +57,11 @@ describe("Vida", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -8 });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -8,
+    });
 
     expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
     expect(tv.eventos.at(-1)).toMatchObject({
@@ -67,8 +78,16 @@ describe("Vida", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -3 });
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: 30 });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -3,
+    });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: 30,
+    });
 
     expect(tv.estado.personagens["thorin"]?.vida).toBe(28);
     // A cura de 30 aconteceu; 5 se perderam no teto, e o Log conta as duas coisas.
@@ -81,7 +100,11 @@ describe("Vida", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -99 });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -99,
+    });
 
     expect(tv.estado.personagens["thorin"]?.vida).toBe(0);
     expect(tv.eventos.at(-1)).toMatchObject({ declarado: -99, vida: 0 });
@@ -93,7 +116,11 @@ describe("Vida", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -8 });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -8,
+    });
 
     expect(tv.estado.personagens["elara"]?.vida).toBe(22);
   });
@@ -109,14 +136,20 @@ describe("Vida", () => {
       diferenca: -8,
     });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Personagem desconhecido: gandalf" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Personagem desconhecido: gandalf",
+    });
     expect(mestre.eventos).toEqual([]);
   });
 
   it("o jogador não altera vida, nem a própria: quem declara o que aconteceu é o mestre", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
     const resposta = await celular.enviar({
       tipo: "alterarVida",
@@ -124,7 +157,10 @@ describe("Vida", () => {
       diferenca: -8,
     });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'alterarVida'" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Só o mestre pode enviar 'alterarVida'",
+    });
     expect(celular.estado.personagens["thorin"]?.vida).toBe(28);
   });
 });
@@ -136,10 +172,17 @@ describe("Vida bônus", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
 
     // A vida não se mexe: a Vida bônus é o segundo pote, não vida a mais.
-    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 10 });
+    expect(tv.estado.personagens["thorin"]).toMatchObject({
+      vida: 28,
+      vidaBonus: 10,
+    });
     expect(tv.eventos.at(-1)).toMatchObject({
       tipo: "VidaBonusConcedida",
       personagem: "thorin",
@@ -153,8 +196,16 @@ describe("Vida bônus", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 4 });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 4,
+    });
 
     // Acumular ou não é decisão do mestre, não do app: ele declara onde ficou.
     expect(tv.estado.personagens["thorin"]?.vidaBonus).toBe(4);
@@ -166,10 +217,21 @@ describe("Vida bônus", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -6 });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -6,
+    });
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 4 });
+    expect(tv.estado.personagens["thorin"]).toMatchObject({
+      vida: 28,
+      vidaBonus: 4,
+    });
   });
 
   it("o que passa da Vida bônus sai da vida, e o Evento grava os dois potes", async () => {
@@ -178,10 +240,21 @@ describe("Vida bônus", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -18 });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -18,
+    });
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 20, vidaBonus: 0 });
+    expect(tv.estado.personagens["thorin"]).toMatchObject({
+      vida: 20,
+      vidaBonus: 0,
+    });
     // Um dano só, declarado uma vez, com o resultado dos dois potes (ADR-0003).
     expect(tv.eventos.at(-1)).toMatchObject({
       tipo: "VidaAlterada",
@@ -197,11 +270,26 @@ describe("Vida bônus", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -14 });
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: 4 });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -14,
+    });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: 4,
+    });
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 0 });
+    expect(tv.estado.personagens["thorin"]).toMatchObject({
+      vida: 28,
+      vidaBonus: 0,
+    });
   });
 
   it("conceder zero tira a Vida bônus que sobrou", async () => {
@@ -210,7 +298,11 @@ describe("Vida bônus", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
     const resposta = await mestre.enviar({
       tipo: "concederVidaBonus",
       personagem: "thorin",
@@ -250,14 +342,20 @@ describe("Vida bônus", () => {
       vidaBonus: 5,
     });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Personagem desconhecido: gandalf" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Personagem desconhecido: gandalf",
+    });
     expect(mestre.eventos).toEqual([]);
   });
 
   it("o jogador não concede Vida bônus, nem a si mesmo", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
     const resposta = await celular.enviar({
       tipo: "concederVidaBonus",
@@ -276,9 +374,16 @@ describe("Vida bônus", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 7 });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 7,
+    });
 
     expect(celular.estado.personagens["thorin"]?.vidaBonus).toBe(7);
   });
@@ -298,38 +403,74 @@ describe("Vida bônus", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -6 });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -6,
+    });
 
     await mesa.reiniciar();
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 4 });
+    expect(tv.estado.personagens["thorin"]).toMatchObject({
+      vida: 28,
+      vidaBonus: 4,
+    });
   });
 });
 
 describe("Catálogo", () => {
   it("qualquer tela consulta uma magia por identificador, com a descrição inteira", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
+    mesa = await criarMesa({
+      fichas: fichasDeExemplo,
+      catalogo: catalogoDeExemplo,
+    });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
-    expect(await celular.consultar({ tipo: "magia", chave: "srd-2024_magic-missile" })).toEqual(
-      misselMagico,
-    );
+    expect(
+      await celular.consultar({
+        tipo: "magia",
+        chave: "srd-2024_magic-missile",
+      }),
+    ).toEqual(misselMagico);
   });
 
   it("o que não está no Catálogo volta nulo, sem derrubar a conexão", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
+    mesa = await criarMesa({
+      fichas: fichasDeExemplo,
+      catalogo: catalogoDeExemplo,
+    });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
-    expect(await celular.consultar({ tipo: "magia", chave: "bola-de-fogo" })).toBeNull();
+    expect(
+      await celular.consultar({ tipo: "magia", chave: "bola-de-fogo" }),
+    ).toBeNull();
     // Mesma chave, tipo errado: `tipo` faz parte da identidade da entrada.
-    expect(await celular.consultar({ tipo: "item", chave: "srd-2024_magic-missile" })).toBeNull();
+    expect(
+      await celular.consultar({
+        tipo: "item",
+        chave: "srd-2024_magic-missile",
+      }),
+    ).toBeNull();
   });
 
   it("consultar o Catálogo não vira Evento: ele não entra no Log", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
+    mesa = await criarMesa({
+      fichas: fichasDeExemplo,
+      catalogo: catalogoDeExemplo,
+    });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     await mestre.digitar("/iniciar");
@@ -337,23 +478,36 @@ describe("Catálogo", () => {
     await mestre.consultar({ tipo: "magia", chave: "srd-2024_magic-missile" });
 
     // Só a Sessão que começou. A regra do SRD não é fato da Mesa.
-    expect(mestre.eventos.map((evento) => evento.tipo)).toEqual(["SessaoIniciada"]);
+    expect(mestre.eventos.map((evento) => evento.tipo)).toEqual([
+      "SessaoIniciada",
+    ]);
   });
 
   it("o Catálogo sobrevive ao reinício sem ser semeado de novo", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
+    mesa = await criarMesa({
+      fichas: fichasDeExemplo,
+      catalogo: catalogoDeExemplo,
+    });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
     await mesa.reiniciar();
 
-    expect(await celular.consultar({ tipo: "magia", chave: "srd-2024_magic-missile" })).toEqual(
-      misselMagico,
-    );
+    expect(
+      await celular.consultar({
+        tipo: "magia",
+        chave: "srd-2024_magic-missile",
+      }),
+    ).toEqual(misselMagico);
   });
 });
 
 describe("Combate", () => {
-  const goblins = [{ nome: "Goblin arqueiro", quantidade: 3, bonusDeIniciativa: 2 }];
+  const goblins = [
+    { nome: "Goblin arqueiro", quantidade: 3, bonusDeIniciativa: 2 },
+  ];
 
   it("o mestre entra em Combate e a Mesa entra junto", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
@@ -363,7 +517,11 @@ describe("Combate", () => {
 
     await mestre.enviar({ tipo: "iniciarCombate" });
 
-    expect(tv.estado.combate).toEqual({ monstros: [], iniciativas: [], fila: null });
+    expect(tv.estado.combate).toEqual({
+      monstros: [],
+      iniciativas: [],
+      fila: null,
+    });
   });
 
   it("recusa entrar em Combate duas vezes", async () => {
@@ -374,7 +532,10 @@ describe("Combate", () => {
     await mestre.enviar({ tipo: "iniciarCombate" });
     const resposta = await mestre.enviar({ tipo: "iniciarCombate" });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "O Combate já está em curso" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "O Combate já está em curso",
+    });
     expect(mestre.eventos).toHaveLength(1);
   });
 
@@ -403,7 +564,10 @@ describe("Combate", () => {
     await mestre.enviar({ tipo: "declararMonstros", monstros: goblins });
     await mestre.enviar({
       tipo: "declararMonstros",
-      monstros: [...goblins, { nome: "Ogro", quantidade: 1, bonusDeIniciativa: -1 }],
+      monstros: [
+        ...goblins,
+        { nome: "Ogro", quantidade: 1, bonusDeIniciativa: -1 },
+      ],
     });
 
     expect(mestre.estado.combate?.monstros).toHaveLength(2);
@@ -417,7 +581,10 @@ describe("Combate", () => {
     await mestre.enviar({ tipo: "iniciarCombate" });
     const resposta = await mestre.enviar({
       tipo: "declararMonstros",
-      monstros: [...goblins, { nome: "Goblin arqueiro", quantidade: 1, bonusDeIniciativa: 2 }],
+      monstros: [
+        ...goblins,
+        { nome: "Goblin arqueiro", quantidade: 1, bonusDeIniciativa: 2 },
+      ],
     });
 
     expect(resposta).toEqual({
@@ -430,7 +597,10 @@ describe("Combate", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     await mestre.enviar({ tipo: "iniciarCombate" });
     // Elara tem bônus 3 na Ficha. O celular não sabe disso e não manda.
@@ -476,17 +646,25 @@ describe("Combate", () => {
 
     const combate = () => mestre.estado.combate!;
     expect(
-      faltam(mestre.estado, combate()).map((quem) => nomeDe(mestre.estado, combate(), quem)),
+      faltam(mestre.estado, combate()).map((quem) =>
+        nomeDe(mestre.estado, combate(), quem),
+      ),
     ).toEqual(["Thorin", "Elara", "Goblin arqueiro ×3"]);
 
     await dela.enviar({ tipo: "declararIniciativa", d20: 14 });
     await dele.enviar({ tipo: "declararIniciativa", d20: 8 });
 
     expect(
-      faltam(mestre.estado, combate()).map((quem) => nomeDe(mestre.estado, combate(), quem)),
+      faltam(mestre.estado, combate()).map((quem) =>
+        nomeDe(mestre.estado, combate(), quem),
+      ),
     ).toEqual(["Goblin arqueiro ×3"]);
 
-    await mestre.enviar({ tipo: "declararIniciativaDoMonstro", nome: "Goblin arqueiro", d20: 11 });
+    await mestre.enviar({
+      tipo: "declararIniciativaDoMonstro",
+      nome: "Goblin arqueiro",
+      d20: 11,
+    });
 
     expect(faltam(mestre.estado, combate())).toEqual([]);
     expect(combate().iniciativas).toHaveLength(3);
@@ -496,39 +674,65 @@ describe("Combate", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     await mestre.enviar({ tipo: "iniciarCombate" });
     await celular.enviar({ tipo: "declararIniciativa", d20: 7 });
     await celular.enviar({ tipo: "declararIniciativa", d20: 17 });
 
     expect(mestre.estado.combate?.iniciativas).toHaveLength(1);
-    expect(mestre.estado.combate?.iniciativas[0]).toMatchObject({ d20: 17, resultado: 20 });
+    expect(mestre.estado.combate?.iniciativas[0]).toMatchObject({
+      d20: 17,
+      resultado: 20,
+    });
     // O Log guarda as duas tentativas: nada apaga.
-    expect(mestre.eventos.filter((evento) => evento.tipo === "IniciativaDeclarada")).toHaveLength(2);
+    expect(
+      mestre.eventos.filter((evento) => evento.tipo === "IniciativaDeclarada"),
+    ).toHaveLength(2);
   });
 
   it("recusa um d20 que não saiu de um d20", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     await mestre.enviar({ tipo: "iniciarCombate" });
-    const resposta = await celular.enviar({ tipo: "declararIniciativa", d20: 23 });
+    const resposta = await celular.enviar({
+      tipo: "declararIniciativa",
+      d20: 23,
+    });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "O d20 é um inteiro de 1 a 20" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "O d20 é um inteiro de 1 a 20",
+    });
     expect(mestre.estado.combate?.iniciativas).toEqual([]);
   });
 
   it("recusa iniciativa fora de Combate", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
-    const resposta = await celular.enviar({ tipo: "declararIniciativa", d20: 14 });
+    const resposta = await celular.enviar({
+      tipo: "declararIniciativa",
+      d20: 14,
+    });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Nenhum Combate em curso" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Nenhum Combate em curso",
+    });
   });
 
   it("recusa o d20 de um Monstro que não foi declarado", async () => {
@@ -543,14 +747,20 @@ describe("Combate", () => {
       d20: 11,
     });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Monstro não declarado: Dragão" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Monstro não declarado: Dragão",
+    });
   });
 
   it("o jogador declara a própria: o Comando não tem onde dizer de quem é", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
     await mestre.enviar({ tipo: "iniciarCombate" });
     await celular.enviar({ tipo: "declararIniciativa", d20: 8 });
@@ -565,15 +775,22 @@ describe("Combate", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
     await mestre.enviar({ tipo: "iniciarCombate" });
 
-    expect(await mestre.enviar({ tipo: "declararIniciativa", d20: 8 })).toEqual({
-      aceito: false,
-      motivo: "Só o jogador pode enviar 'declararIniciativa'",
-    });
-    expect(await celular.enviar({ tipo: "declararMonstros", monstros: goblins })).toEqual({
+    expect(await mestre.enviar({ tipo: "declararIniciativa", d20: 8 })).toEqual(
+      {
+        aceito: false,
+        motivo: "Só o jogador pode enviar 'declararIniciativa'",
+      },
+    );
+    expect(
+      await celular.enviar({ tipo: "declararMonstros", monstros: goblins }),
+    ).toEqual({
       aceito: false,
       motivo: "Só o mestre pode enviar 'declararMonstros'",
     });
@@ -583,7 +800,10 @@ describe("Combate", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
     const tv = await mesa.conectar({ como: "mesa" });
 
     await mestre.enviar({ tipo: "iniciarCombate" });
@@ -606,7 +826,9 @@ describe("Combate", () => {
 
     expect(dela.estado.combate?.iniciativas).toHaveLength(1);
     // Nos Eventos recebidos, não na tela: o 14 dela não chegou no aparelho dele.
-    expect(dele.eventos.some((evento) => evento.tipo === "IniciativaDeclarada")).toBe(false);
+    expect(
+      dele.eventos.some((evento) => evento.tipo === "IniciativaDeclarada"),
+    ).toBe(false);
     expect(dele.estado.combate?.iniciativas).toEqual([]);
   });
 
@@ -631,7 +853,10 @@ describe("Combate", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     await mestre.enviar({ tipo: "iniciarCombate" });
     await mestre.enviar({ tipo: "declararMonstros", monstros: goblins });
@@ -647,7 +872,10 @@ describe("Combate", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     await mestre.enviar({ tipo: "iniciarCombate" });
     await celular.enviar({ tipo: "declararIniciativa", d20: 14 });
@@ -657,7 +885,10 @@ describe("Combate", () => {
 
     // A rolagem daquela hora continua valendo 17: o Evento guardou o resultado,
     // e não a conta (ADR-0003).
-    expect(mestre.estado.combate?.iniciativas[0]).toMatchObject({ d20: 14, resultado: 17 });
+    expect(mestre.estado.combate?.iniciativas[0]).toMatchObject({
+      d20: 14,
+      resultado: 17,
+    });
   });
 
   it("'/combate' e '/iniciativa' atravessam pelo mesmo caminho", async () => {
@@ -671,12 +902,17 @@ describe("Combate", () => {
     // linha junta tudo menos o ultimo pedaco, que e o d20.
     await mestre.digitar("/iniciativa Goblin arqueiro 11");
 
-    expect(mestre.estado.combate?.iniciativas[0]).toMatchObject({ d20: 11, resultado: 13 });
+    expect(mestre.estado.combate?.iniciativas[0]).toMatchObject({
+      d20: 11,
+      resultado: 13,
+    });
   });
 });
 
 describe("Fila de iniciativa", () => {
-  const goblins = [{ nome: "Goblin arqueiro", quantidade: 3, bonusDeIniciativa: 2 }];
+  const goblins = [
+    { nome: "Goblin arqueiro", quantidade: 3, bonusDeIniciativa: 2 },
+  ];
   const thorinNaFila = { tipo: "personagem", personagem: "thorin" } as const;
   const elaraNaFila = { tipo: "personagem", personagem: "elara" } as const;
   const goblinNaFila = { tipo: "monstro", nome: "Goblin arqueiro" } as const;
@@ -691,7 +927,11 @@ describe("Fila de iniciativa", () => {
     await mestre.enviar({ tipo: "declararMonstros", monstros: goblins });
     await dele.enviar({ tipo: "declararIniciativa", d20: 8 });
     await dela.enviar({ tipo: "declararIniciativa", d20: 14 });
-    await mestre.enviar({ tipo: "declararIniciativaDoMonstro", nome: "Goblin arqueiro", d20: 11 });
+    await mestre.enviar({
+      tipo: "declararIniciativaDoMonstro",
+      nome: "Goblin arqueiro",
+      d20: 11,
+    });
 
     return mestre;
   };
@@ -704,16 +944,26 @@ describe("Fila de iniciativa", () => {
 
     // A ordem é escolhida, não calculada: Elara tirou 17 e o Goblin 13, e o
     // mestre pôs o Goblin primeiro porque quis.
-    await mestre.enviar({ tipo: "publicarFila", fila: [goblinNaFila, elaraNaFila, thorinNaFila] });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [goblinNaFila, elaraNaFila, thorinNaFila],
+    });
 
-    expect(tv.estado.combate?.fila).toEqual([goblinNaFila, elaraNaFila, thorinNaFila]);
+    expect(tv.estado.combate?.fila).toEqual([
+      goblinNaFila,
+      elaraNaFila,
+      thorinNaFila,
+    ]);
   });
 
   it("a Fila é lista de identificadores, e não das iniciativas", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await combatePronto();
-    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, goblinNaFila, thorinNaFila] });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila, goblinNaFila, thorinNaFila],
+    });
 
     const publicada = mestre.eventos.at(-1);
     expect(publicada).toMatchObject({ tipo: "FilaPublicada" });
@@ -728,7 +978,10 @@ describe("Fila de iniciativa", () => {
     const mestre = await combatePronto();
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, goblinNaFila, thorinNaFila] });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila, goblinNaFila, thorinNaFila],
+    });
 
     expect(tv.estado.combate?.fila).toHaveLength(3);
     // A projeção já tirava as iniciativas da TV, e continua tirando: a Fila diz
@@ -742,8 +995,15 @@ describe("Fila de iniciativa", () => {
     const mestre = await combatePronto();
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, thorinNaFila, goblinNaFila] });
-    await mestre.enviar({ tipo: "alterarVida", personagem: "thorin", diferenca: -8 });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila, thorinNaFila, goblinNaFila],
+    });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -8,
+    });
 
     expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
   });
@@ -754,19 +1014,37 @@ describe("Fila de iniciativa", () => {
     const mestre = await combatePronto();
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, goblinNaFila, thorinNaFila] });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila, goblinNaFila, thorinNaFila],
+    });
 
     // Chega um ogro no meio do Combate.
     const ogro = { nome: "Ogro", quantidade: 1, bonusDeIniciativa: -1 };
-    await mestre.enviar({ tipo: "declararMonstros", monstros: [...goblins, ogro] });
-    await mestre.enviar({ tipo: "declararIniciativaDoMonstro", nome: "Ogro", d20: 5 });
+    await mestre.enviar({
+      tipo: "declararMonstros",
+      monstros: [...goblins, ogro],
+    });
+    await mestre.enviar({
+      tipo: "declararIniciativaDoMonstro",
+      nome: "Ogro",
+      d20: 5,
+    });
     await mestre.enviar({
       tipo: "publicarFila",
-      fila: [elaraNaFila, { tipo: "monstro", nome: "Ogro" }, goblinNaFila, thorinNaFila],
+      fila: [
+        elaraNaFila,
+        { tipo: "monstro", nome: "Ogro" },
+        goblinNaFila,
+        thorinNaFila,
+      ],
     });
 
     expect(tv.estado.combate?.fila).toHaveLength(4);
-    expect(tv.estado.combate?.fila?.[1]).toEqual({ tipo: "monstro", nome: "Ogro" });
+    expect(tv.estado.combate?.fila?.[1]).toEqual({
+      tipo: "monstro",
+      nome: "Ogro",
+    });
   });
 
   it("recusa um Participante que não está neste Combate", async () => {
@@ -812,7 +1090,10 @@ describe("Fila de iniciativa", () => {
 
     // Thorin foi ao banheiro e não declarou nada. O mestre publica assim mesmo,
     // e republica quando ele voltar.
-    const resposta = await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila] });
+    const resposta = await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila],
+    });
 
     expect(resposta).toEqual({ aceito: true });
     expect(mestre.estado.combate?.fila).toEqual([elaraNaFila]);
@@ -823,20 +1104,35 @@ describe("Fila de iniciativa", () => {
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
 
-    const resposta = await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila] });
+    const resposta = await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila],
+    });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Nenhum Combate em curso" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Nenhum Combate em curso",
+    });
   });
 
   it("o jogador não publica a Fila: a ordem é escolhida pelo mestre", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     await combatePronto();
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
-    const resposta = await celular.enviar({ tipo: "publicarFila", fila: [elaraNaFila] });
+    const resposta = await celular.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila],
+    });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'publicarFila'" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Só o mestre pode enviar 'publicarFila'",
+    });
   });
 
   it("encerrar o Combate devolve a TV para a Cena", async () => {
@@ -846,7 +1142,10 @@ describe("Fila de iniciativa", () => {
     const tv = await mesa.conectar({ como: "mesa" });
 
     await mestre.enviar({ tipo: "trocarCena", cena: "taverna-do-javali" });
-    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, thorinNaFila, goblinNaFila] });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila, thorinNaFila, goblinNaFila],
+    });
     expect(tv.estado.combate?.fila).toHaveLength(3);
 
     await mestre.digitar("/encerra");
@@ -863,7 +1162,10 @@ describe("Fila de iniciativa", () => {
 
     const resposta = await mestre.digitar("/encerra");
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Nenhum Combate em curso" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Nenhum Combate em curso",
+    });
   });
 
   it("o Combate seguinte começa sem a Fila do anterior", async () => {
@@ -871,11 +1173,18 @@ describe("Fila de iniciativa", () => {
 
     const mestre = await combatePronto();
 
-    await mestre.enviar({ tipo: "publicarFila", fila: [elaraNaFila, thorinNaFila, goblinNaFila] });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [elaraNaFila, thorinNaFila, goblinNaFila],
+    });
     await mestre.enviar({ tipo: "encerrarCombate" });
     await mestre.enviar({ tipo: "iniciarCombate" });
 
-    expect(mestre.estado.combate).toEqual({ monstros: [], iniciativas: [], fila: null });
+    expect(mestre.estado.combate).toEqual({
+      monstros: [],
+      iniciativas: [],
+      fila: null,
+    });
   });
 
   it("a Fila sobrevive ao reinício, porque ela está no Log", async () => {
@@ -884,10 +1193,17 @@ describe("Fila de iniciativa", () => {
     const mestre = await combatePronto();
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "publicarFila", fila: [goblinNaFila, elaraNaFila, thorinNaFila] });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [goblinNaFila, elaraNaFila, thorinNaFila],
+    });
     await mesa.reiniciar();
 
-    expect(tv.estado.combate?.fila).toEqual([goblinNaFila, elaraNaFila, thorinNaFila]);
+    expect(tv.estado.combate?.fila).toEqual([
+      goblinNaFila,
+      elaraNaFila,
+      thorinNaFila,
+    ]);
   });
 });
 
@@ -896,9 +1212,16 @@ describe("Moedas", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
-    await mestre.enviar({ tipo: "alterarMoedas", personagem: "thorin", diferenca: 50 });
+    await mestre.enviar({
+      tipo: "alterarMoedas",
+      personagem: "thorin",
+      diferenca: 50,
+    });
 
     expect(celular.estado.personagens["thorin"]?.moedas).toBe(170);
   });
@@ -908,7 +1231,11 @@ describe("Moedas", () => {
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
 
-    await mestre.enviar({ tipo: "alterarMoedas", personagem: "thorin", diferenca: -20 });
+    await mestre.enviar({
+      tipo: "alterarMoedas",
+      personagem: "thorin",
+      diferenca: -20,
+    });
 
     expect(mestre.eventos.at(-1)).toMatchObject({
       tipo: "MoedasAlteradas",
@@ -923,7 +1250,11 @@ describe("Moedas", () => {
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
 
-    await mestre.enviar({ tipo: "alterarMoedas", personagem: "elara", diferenca: -500 });
+    await mestre.enviar({
+      tipo: "alterarMoedas",
+      personagem: "elara",
+      diferenca: -500,
+    });
 
     // Não vira uma dívida que o app passaria a carregar (ADR-0001).
     expect(mestre.estado.personagens["elara"]?.moedas).toBe(0);
@@ -944,7 +1275,11 @@ describe("Moedas", () => {
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
 
-    await mestre.enviar({ tipo: "alterarMoedas", personagem: "thorin", diferenca: -20 });
+    await mestre.enviar({
+      tipo: "alterarMoedas",
+      personagem: "thorin",
+      diferenca: -20,
+    });
     expect(mestre.estado.personagens["thorin"]?.moedas).toBe(100);
 
     // O mestre corrige a Ficha: ele tinha 200 no começo da campanha, não 120.
@@ -966,14 +1301,20 @@ describe("Moedas", () => {
       diferenca: 10,
     });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Personagem desconhecido: gandalf" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Personagem desconhecido: gandalf",
+    });
     expect(mestre.eventos).toEqual([]);
   });
 
   it("o jogador não mexe no próprio bolso: quem declara o que aconteceu é o mestre", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
     const resposta = await celular.enviar({
       tipo: "alterarMoedas",
@@ -981,7 +1322,10 @@ describe("Moedas", () => {
       diferenca: 1000,
     });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'alterarMoedas'" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Só o mestre pode enviar 'alterarMoedas'",
+    });
     expect(celular.estado.personagens["thorin"]?.moedas).toBe(120);
   });
 
@@ -1028,7 +1372,11 @@ describe("Moedas", () => {
     const dele = await mesa.conectar({ como: "jogador", personagem: "thorin" });
     const dela = await mesa.conectar({ como: "jogador", personagem: "elara" });
 
-    await mestre.enviar({ tipo: "alterarMoedas", personagem: "thorin", diferenca: 50 });
+    await mestre.enviar({
+      tipo: "alterarMoedas",
+      personagem: "thorin",
+      diferenca: 50,
+    });
 
     expect(dele.estado.personagens["thorin"]?.moedas).toBe(170);
     // Nos Eventos recebidos, e não na tela: o número não chegou no aparelho dela.
@@ -1043,7 +1391,11 @@ describe("Moedas", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const dela = await mesa.conectar({ como: "jogador", personagem: "elara" });
 
-    await mestre.enviar({ tipo: "alterarMoedas", personagem: "thorin", diferenca: 50 });
+    await mestre.enviar({
+      tipo: "alterarMoedas",
+      personagem: "thorin",
+      diferenca: 50,
+    });
     await dela.reconectar();
 
     expect(dela.estado.personagens["elara"]?.moedas).toBe(35);
@@ -1056,7 +1408,11 @@ describe("Moedas", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "alterarMoedas", personagem: "thorin", diferenca: 50 });
+    await mestre.enviar({
+      tipo: "alterarMoedas",
+      personagem: "thorin",
+      diferenca: 50,
+    });
 
     expect(tv.eventos).toEqual([]);
     expect(tv.estado.personagens["thorin"]?.moedas).toBeNull();
@@ -1067,7 +1423,10 @@ describe("a Ficha do jogador", () => {
   it("o celular pede a própria Ficha e recebe inventário, magias e equipado", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     expect(await celular.minhaFicha()).toEqual(elara);
   });
@@ -1096,7 +1455,10 @@ describe("a Ficha do jogador", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     await celular.minhaFicha();
 
@@ -1106,12 +1468,18 @@ describe("a Ficha do jogador", () => {
   it("editar a Ficha e reiniciar é o que muda o que o celular vê", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
     expect((await celular.minhaFicha())?.inventario).toEqual([]);
 
     // A única forma de uma Ficha mudar: o mestre edita o arquivo e reinicia
     // (ADR-0002). Não existe Comando de equipar, nem tela de cadastro.
-    await mesa.reiniciar([thorin, { ...elara, inventario: [{ chave: corda.chave, quantidade: 2 }] }]);
+    await mesa.reiniciar([
+      thorin,
+      { ...elara, inventario: [{ chave: corda.chave, quantidade: 2 }] },
+    ]);
 
     expect((await celular.minhaFicha())?.inventario).toEqual([
       { chave: "srd-2024_rope", quantidade: 2 },
@@ -1119,15 +1487,23 @@ describe("a Ficha do jogador", () => {
   });
 
   it("o inventário e as magias apontam para o Catálogo, que é quem tem a descrição", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, catalogo: catalogoDeExemplo });
+    mesa = await criarMesa({
+      fichas: fichasDeExemplo,
+      catalogo: catalogoDeExemplo,
+    });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     const ficha = await celular.minhaFicha();
     const chave = ficha!.magias[0]!.chave;
 
     // A Ficha guarda a chave; a descrição sai do Catálogo, pelo mesmo socket.
-    expect(await celular.consultar({ tipo: "magia", chave })).toEqual(misselMagico);
+    expect(await celular.consultar({ tipo: "magia", chave })).toEqual(
+      misselMagico,
+    );
   });
 });
 
@@ -1169,7 +1545,10 @@ describe("Cena", () => {
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
 
-    const resposta = await mestre.enviar({ tipo: "trocarCena", cena: "../../.env" });
+    const resposta = await mestre.enviar({
+      tipo: "trocarCena",
+      cena: "../../.env",
+    });
 
     expect(resposta.aceito).toBe(false);
     expect(mestre.eventos).toEqual([]);
@@ -1193,11 +1572,20 @@ describe("Cena", () => {
   it("o jogador não troca a Cena: a TV é do mestre", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
-    const resposta = await celular.enviar({ tipo: "trocarCena", cena: "taverna-do-javali" });
+    const resposta = await celular.enviar({
+      tipo: "trocarCena",
+      cena: "taverna-do-javali",
+    });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'trocarCena'" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Só o mestre pode enviar 'trocarCena'",
+    });
   });
 });
 
@@ -1224,7 +1612,9 @@ describe("a linha que o mestre digita", () => {
     await mestre.digitar("/cura thorin 5");
 
     expect(tv.estado.personagens["thorin"]?.vida).toBe(23);
-    expect(tv.eventos.map((evento) => "declarado" in evento && evento.declarado)).toEqual([-10, 5]);
+    expect(
+      tv.eventos.map((evento) => "declarado" in evento && evento.declarado),
+    ).toEqual([-10, 5]);
   });
 
   it("'/dano thorin -8' é erro de digitação, não uma cura", async () => {
@@ -1248,7 +1638,10 @@ describe("a linha que o mestre digita", () => {
     await mestre.digitar("/bonus thorin 10");
     await mestre.digitar("/dano thorin 6");
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 28, vidaBonus: 4 });
+    expect(tv.estado.personagens["thorin"]).toMatchObject({
+      vida: 28,
+      vidaBonus: 4,
+    });
   });
 
   it("'/bonus thorin -3' não chega no servidor: a quantidade vai sem sinal", async () => {
@@ -1360,11 +1753,17 @@ describe("identidade e autorização", () => {
   it("recusa um Comando de mestre vindo de um socket de jogador", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
     const resposta = await celular.enviar({ tipo: "iniciarSessao" });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "Só o mestre pode enviar 'iniciarSessao'" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "Só o mestre pode enviar 'iniciarSessao'",
+    });
     expect(celular.estado.sessaoAtiva).toBe(false);
     expect(celular.eventos).toEqual([]);
   });
@@ -1381,19 +1780,22 @@ describe("identidade e autorização", () => {
   });
 
   it("recusa o handshake do mestre com a senha errada", async () => {
-    mesa = await criarMesa({ fichas: fichasDeExemplo, senhaDoMestre: "abracadabra" });
+    mesa = await criarMesa({
+      fichas: fichasDeExemplo,
+      senhaDoMestre: "abracadabra",
+    });
 
-    await expect(mesa.conectar({ como: "mestre", senha: "1234" })).rejects.toThrow(
-      "Senha incorreta",
-    );
+    await expect(
+      mesa.conectar({ como: "mestre", senha: "1234" }),
+    ).rejects.toThrow("Senha incorreta");
   });
 
   it("recusa o handshake de um personagem que não está nas Fichas", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    await expect(mesa.conectar({ como: "jogador", personagem: "gandalf" })).rejects.toThrow(
-      "Personagem desconhecido: gandalf",
-    );
+    await expect(
+      mesa.conectar({ como: "jogador", personagem: "gandalf" }),
+    ).rejects.toThrow("Personagem desconhecido: gandalf");
   });
 });
 
@@ -1433,7 +1835,11 @@ describe("o Log", () => {
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await mestre.enviar({ tipo: "concederVidaBonus", personagem: "thorin", vidaBonus: 10 });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "thorin",
+      vidaBonus: 10,
+    });
 
     // O Log de dezembro foi escrito por um servidor que não conhecia a Vida
     // bônus, e um Log não se reescreve: o `VidaAlterada` dele não tem o segundo
@@ -1456,7 +1862,10 @@ describe("o Log", () => {
 
     // Ele diz onde a vida ficou e não diz nada sobre a Vida bônus — então não
     // mexe nela. Nenhum `undefined` vaza para a barra da TV.
-    expect(tv.estado.personagens["thorin"]).toMatchObject({ vida: 20, vidaBonus: 10 });
+    expect(tv.estado.personagens["thorin"]).toMatchObject({
+      vida: 20,
+      vidaBonus: 10,
+    });
   });
 
   it("é append-only: nada apaga, nada edita", async () => {
@@ -1468,9 +1877,13 @@ describe("o Log", () => {
     // mesmo para quem não passa pelo servidor.
     const sqlite = new DatabaseSync(mesa.caminhoDoLog);
     try {
-      expect(() => sqlite.exec("UPDATE eventos SET corpo = '{}'")).toThrow(/append-only/);
+      expect(() => sqlite.exec("UPDATE eventos SET corpo = '{}'")).toThrow(
+        /append-only/,
+      );
       expect(() => sqlite.exec("DELETE FROM eventos")).toThrow(/append-only/);
-      expect(sqlite.prepare("SELECT COUNT(*) AS total FROM eventos").get()!["total"]).toBe(1);
+      expect(
+        sqlite.prepare("SELECT COUNT(*) AS total FROM eventos").get()!["total"],
+      ).toBe(1);
     } finally {
       sqlite.close();
     }
@@ -1483,7 +1896,10 @@ describe("o Log", () => {
 
     const resposta = await mestre.enviar({ tipo: "iniciarSessao" });
 
-    expect(resposta).toEqual({ aceito: false, motivo: "A Sessão já está em curso" });
+    expect(resposta).toEqual({
+      aceito: false,
+      motivo: "A Sessão já está em curso",
+    });
     expect(mestre.eventos).toHaveLength(1);
   });
 });
@@ -1497,9 +1913,15 @@ describe("Anotações privadas", () => {
   it("o jogador escreve e o bloco volta para ele", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
-    await celular.enviar({ tipo: "atualizarAnotacao", texto: "o taverneiro mentiu sobre o poço" });
+    await celular.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "o taverneiro mentiu sobre o poço",
+    });
 
     expect(celular.estado.personagens["elara"]?.anotacao).toBe(
       "o taverneiro mentiu sobre o poço",
@@ -1509,9 +1931,15 @@ describe("Anotações privadas", () => {
   it("o Evento nasce com audiência privada do personagem", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
-    await celular.enviar({ tipo: "atualizarAnotacao", texto: "anel no bolso do bardo" });
+    await celular.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "anel no bolso do bardo",
+    });
 
     expect(celular.eventos.at(-1)).toMatchObject({
       tipo: "AnotacaoAtualizada",
@@ -1525,10 +1953,19 @@ describe("Anotações privadas", () => {
   it("cada Evento carrega o bloco inteiro, não o que mudou", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
-    await celular.enviar({ tipo: "atualizarAnotacao", texto: "primeira linha" });
-    await celular.enviar({ tipo: "atualizarAnotacao", texto: "primeira linha\nsegunda linha" });
+    await celular.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "primeira linha",
+    });
+    await celular.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "primeira linha\nsegunda linha",
+    });
 
     // O segundo Evento não diz "acrescente uma linha": ele diz o que o bloco é
     // agora. É o mesmo motivo do ADR-0003 — o Evento guarda o resultado.
@@ -1543,7 +1980,10 @@ describe("Anotações privadas", () => {
     const dela = await mesa.conectar({ como: "jogador", personagem: "elara" });
     const dele = await mesa.conectar({ como: "jogador", personagem: "thorin" });
 
-    await dela.enviar({ tipo: "atualizarAnotacao", texto: "não confio no Thorin" });
+    await dela.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "não confio no Thorin",
+    });
 
     // Nos Eventos recebidos, não na tela: o texto não está no navegador dele
     // para ser escondido por CSS nenhum.
@@ -1554,10 +1994,16 @@ describe("Anotações privadas", () => {
   it("a TV também não recebe: ela fica no meio da mesa, virada para todo mundo", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
     const tv = await mesa.conectar({ como: "mesa" });
 
-    await celular.enviar({ tipo: "atualizarAnotacao", texto: "a chave está na bota" });
+    await celular.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "a chave está na bota",
+    });
 
     expect(tv.eventos).toEqual([]);
     expect(tv.estado.personagens["elara"]?.anotacao).toBe("");
@@ -1567,12 +2013,23 @@ describe("Anotações privadas", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
-    await celular.enviar({ tipo: "atualizarAnotacao", texto: "vou trair o grupo no terceiro ato" });
+    await celular.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "vou trair o grupo no terceiro ato",
+    });
 
-    expect(mestre.eventos.at(-1)).toMatchObject({ tipo: "AnotacaoAtualizada", personagem: "elara" });
-    expect(mestre.estado.personagens["elara"]?.anotacao).toBe("vou trair o grupo no terceiro ato");
+    expect(mestre.eventos.at(-1)).toMatchObject({
+      tipo: "AnotacaoAtualizada",
+      personagem: "elara",
+    });
+    expect(mestre.estado.personagens["elara"]?.anotacao).toBe(
+      "vou trair o grupo no terceiro ato",
+    );
   });
 
   it("o snapshot já vem filtrado: quem reconecta não recebe o bloco do colega", async () => {
@@ -1582,13 +2039,18 @@ describe("Anotações privadas", () => {
     const dele = await mesa.conectar({ como: "jogador", personagem: "thorin" });
 
     await dela.enviar({ tipo: "atualizarAnotacao", texto: "o mapa é falso" });
-    await dele.enviar({ tipo: "atualizarAnotacao", texto: "comprar corda nova" });
+    await dele.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "comprar corda nova",
+    });
 
     // Reconectar é o caminho por onde o estado inteiro sai do servidor de uma
     // vez. Se a projeção fosse só nos deltas, era aqui que vazava.
     await dele.reconectar();
 
-    expect(dele.estado.personagens["thorin"]?.anotacao).toBe("comprar corda nova");
+    expect(dele.estado.personagens["thorin"]?.anotacao).toBe(
+      "comprar corda nova",
+    );
     expect(dele.estado.personagens["elara"]?.anotacao).toBe("");
   });
 
@@ -1610,7 +2072,10 @@ describe("Anotações privadas", () => {
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
 
-    const resposta = await mestre.enviar({ tipo: "atualizarAnotacao", texto: "nota do mestre" });
+    const resposta = await mestre.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "nota do mestre",
+    });
 
     expect(resposta).toEqual({
       aceito: false,
@@ -1622,7 +2087,10 @@ describe("Anotações privadas", () => {
   it("sobrevive ao reinício, porque ela está no Log", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     await celular.enviar({ tipo: "atualizarAnotacao", texto: "a porta range" });
     await mesa.reiniciar();
@@ -1633,7 +2101,10 @@ describe("Anotações privadas", () => {
   it("apagar o bloco é escrever nada nele, e isso também é um fato", async () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
-    const celular = await mesa.conectar({ como: "jogador", personagem: "elara" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
 
     await celular.enviar({ tipo: "atualizarAnotacao", texto: "engano meu" });
     await celular.enviar({ tipo: "atualizarAnotacao", texto: "" });
@@ -1649,7 +2120,10 @@ describe("reconexão", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
     await celular.reconectar();
 
@@ -1665,7 +2139,10 @@ describe("reconexão", () => {
     mesa = await criarMesa({ fichas: fichasDeExemplo });
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
-    const celular = await mesa.conectar({ como: "jogador", personagem: "thorin" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
 
     celular.desconectar();
     await mestre.enviar({ tipo: "iniciarSessao" });

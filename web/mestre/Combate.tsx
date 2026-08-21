@@ -1,7 +1,12 @@
 import { useRef, useState, type FormEvent, type Ref } from "react";
 import { chamada, chaveDe, nomeDe } from "../../shared/combate.js";
 import type { Comando, Resposta } from "../../shared/comandos.js";
-import type { Estado, Iniciativa, Monstro, Participante } from "../../shared/tipos.js";
+import type {
+  Estado,
+  Iniciativa,
+  Monstro,
+  Participante,
+} from "../../shared/tipos.js";
 
 /**
  * O Combate no notebook do mestre: declarar os Monstros, ver as iniciativas
@@ -35,7 +40,9 @@ export const Combate = ({
   if (estado.combate === null) {
     return (
       <section className="combate">
-        <button onClick={() => void tentar({ tipo: "iniciarCombate" })}>iniciar Combate</button>
+        <button onClick={() => void tentar({ tipo: "iniciarCombate" })}>
+          iniciar Combate
+        </button>
         {recusa !== null && <p className="resposta recusada">{recusa}</p>}
       </section>
     );
@@ -43,7 +50,9 @@ export const Combate = ({
 
   const combate = estado.combate;
   const linhas = chamada(estado, combate);
-  const quantosFaltam = linhas.filter((linha) => linha.iniciativa === null).length;
+  const quantosFaltam = linhas.filter(
+    (linha) => linha.iniciativa === null,
+  ).length;
 
   return (
     <section className="combate">
@@ -63,7 +72,11 @@ export const Combate = ({
                 nome={participante.nome}
                 iniciativa={iniciativa}
                 declarar={(d20) =>
-                  tentar({ tipo: "declararIniciativaDoMonstro", nome: participante.nome, d20 })
+                  tentar({
+                    tipo: "declararIniciativaDoMonstro",
+                    nome: participante.nome,
+                    d20,
+                  })
                 }
               />
             ) : iniciativa === null ? (
@@ -84,7 +97,9 @@ export const Combate = ({
         <button onClick={() => montar.current?.showModal()}>
           {combate.fila === null ? "montar a Fila" : "remontar a Fila"}
         </button>
-        <button onClick={() => void tentar({ tipo: "encerrarCombate" })}>encerrar Combate</button>
+        <button onClick={() => void tentar({ tipo: "encerrarCombate" })}>
+          encerrar Combate
+        </button>
       </div>
 
       <MontarFila
@@ -127,7 +142,9 @@ const MontarFila = ({
 
   // Enquanto o mestre não mexeu, a lista é a da chamada — os personagens e
   // depois os Monstros, na ordem em que foram declarados.
-  const daChamada = chamada(estado, combate).map(({ participante }) => participante);
+  const daChamada = chamada(estado, combate).map(
+    ({ participante }) => participante,
+  );
   const atual = ordem === null ? daChamada : reconciliar(ordem, daChamada);
 
   const mover = (de: number, para: number) => {
@@ -156,7 +173,9 @@ const MontarFila = ({
           return (
             <li key={chaveDe(participante)}>
               <span>{nomeDe(estado, combate, participante)}</span>
-              <span className="apagado">{rolou === undefined ? "—" : rolou.resultado}</span>
+              <span className="apagado">
+                {rolou === undefined ? "—" : rolou.resultado}
+              </span>
               <button
                 onClick={() => mover(posicao, posicao - 1)}
                 disabled={posicao === 0}
@@ -177,7 +196,9 @@ const MontarFila = ({
       </ol>
 
       <div className="acoes">
-        <button onClick={() => void publicar(atual)}>publicar para a Mesa</button>
+        <button onClick={() => void publicar(atual)}>
+          publicar para a Mesa
+        </button>
       </div>
     </dialog>
   );
@@ -200,7 +221,9 @@ const reconciliar = (
 
   return [
     ...ordem.filter((participante) => existe.has(chaveDe(participante))),
-    ...daChamada.filter((participante) => !jaOrdenados.has(chaveDe(participante))),
+    ...daChamada.filter(
+      (participante) => !jaOrdenados.has(chaveDe(participante)),
+    ),
   ];
 };
 
@@ -210,7 +233,8 @@ const reconciliar = (
  */
 const Resultado = ({ iniciativa }: { iniciativa: Iniciativa }) => (
   <strong>
-    {iniciativa.resultado} <span className="apagado">(d20 {iniciativa.d20})</span>
+    {iniciativa.resultado}{" "}
+    <span className="apagado">(d20 {iniciativa.d20})</span>
   </strong>
 );
 
@@ -290,7 +314,11 @@ const DeclararMonstros = ({
         evento.preventDefault();
         const aceito = await declarar([
           ...monstros,
-          { nome: nome.trim(), quantidade: Number(quantidade), bonusDeIniciativa: Number(bonus) },
+          {
+            nome: nome.trim(),
+            quantidade: Number(quantidade),
+            bonusDeIniciativa: Number(bonus),
+          },
         ]);
         if (!aceito) return;
         setNome("");

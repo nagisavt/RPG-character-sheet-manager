@@ -26,7 +26,9 @@ export const BarraDeVida = ({ personagem }: { personagem: Personagem }) => (
       aria-valuemin={0}
       aria-valuemax={personagem.vidaMaxima}
     >
-      <div style={{ width: `${(personagem.vida / personagem.vidaMaxima) * 100}%` }} />
+      <div
+        style={{ width: `${(personagem.vida / personagem.vidaMaxima) * 100}%` }}
+      />
     </div>
 
     {personagem.vidaBonus > 0 && (
@@ -72,7 +74,9 @@ export const Moedas = ({ personagem }: { personagem: Personagem }) => {
 export const Numeros = ({ personagem }: { personagem: Personagem }) => (
   <>
     {personagem.vida} / {personagem.vidaMaxima}
-    {personagem.vidaBonus > 0 && <em className="bonus">+{personagem.vidaBonus}</em>}
+    {personagem.vidaBonus > 0 && (
+      <em className="bonus">+{personagem.vidaBonus}</em>
+    )}
   </>
 );
 

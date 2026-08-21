@@ -1,8 +1,24 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode, type Ref } from "react";
-import type { Consulta, Entrada, TipoDoCatalogo } from "../../shared/catalogo.js";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+  type Ref,
+} from "react";
+import type {
+  Consulta,
+  Entrada,
+  TipoDoCatalogo,
+} from "../../shared/catalogo.js";
 import type { Comando, Resposta } from "../../shared/comandos.js";
 import { mesmo } from "../../shared/combate.js";
-import type { Combate, Ficha, Personagem, PersonagemId } from "../../shared/tipos.js";
+import type {
+  Combate,
+  Ficha,
+  Personagem,
+  PersonagemId,
+} from "../../shared/tipos.js";
 import { BarraDeVida, ImagemOuRotulo, Moedas, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 
@@ -56,7 +72,9 @@ export const TelaDoJogador = () => {
     return (
       <main className="jogador">
         <p className="avisando">
-          {ligacao.situacao === "recusado" ? ligacao.motivo : "Ligando na Mesa…"}
+          {ligacao.situacao === "recusado"
+            ? ligacao.motivo
+            : "Ligando na Mesa…"}
         </p>
       </main>
     );
@@ -64,7 +82,10 @@ export const TelaDoJogador = () => {
 
   if (escolhido === null) {
     return (
-      <Escolha personagens={Object.values(ligacao.estado.personagens)} escolher={setEscolhido} />
+      <Escolha
+        personagens={Object.values(ligacao.estado.personagens)}
+        escolher={setEscolhido}
+      />
     );
   }
 
@@ -163,9 +184,13 @@ const Hub = ({
       <Iniciativa personagem={personagem} combate={combate} enviar={enviar} />
 
       <nav className="tres">
-        <button onClick={() => inventario.current?.showModal()}>Inventário</button>
+        <button onClick={() => inventario.current?.showModal()}>
+          Inventário
+        </button>
         <button onClick={() => magias.current?.showModal()}>Magias</button>
-        <button onClick={() => notas.current?.showModal()}>Bloco de notas</button>
+        <button onClick={() => notas.current?.showModal()}>
+          Bloco de notas
+        </button>
       </nav>
 
       <Prateleira
@@ -187,11 +212,18 @@ const Hub = ({
         tipo="magia"
         pasta="magias"
         vazio="Nenhuma magia nesta Ficha."
-        linhas={ficha.magias.map((magia) => ({ chave: magia.chave, quantidade: 1 }))}
+        linhas={ficha.magias.map((magia) => ({
+          chave: magia.chave,
+          quantidade: 1,
+        }))}
         consultar={consultar}
       />
 
-      <BlocoDeNotas ref={notas} anotacao={personagem.anotacao} enviar={enviar} />
+      <BlocoDeNotas
+        ref={notas}
+        anotacao={personagem.anotacao}
+        enviar={enviar}
+      />
     </main>
   );
 };
@@ -220,7 +252,10 @@ const Iniciativa = ({
 
   const minha =
     combate?.iniciativas.find((qual) =>
-      mesmo(qual.participante, { tipo: "personagem", personagem: personagem.id }),
+      mesmo(qual.participante, {
+        tipo: "personagem",
+        personagem: personagem.id,
+      }),
     ) ?? null;
 
   const esperando = combate !== null && minha === null;
@@ -248,20 +283,26 @@ const Iniciativa = ({
         ) : (
           <>
             Iniciativa <strong>{minha.resultado}</strong>{" "}
-            <span className="apagado">(d20 {minha.d20}) — toque para corrigir</span>
+            <span className="apagado">
+              (d20 {minha.d20}) — toque para corrigir
+            </span>
           </>
         )}
       </button>
 
       <Modal ref={popup} titulo="Sua iniciativa">
         <p className="apagado">
-          Role o d20 na mesa e digite o que saiu no dado. O bônus quem soma é o servidor.
+          Role o d20 na mesa e digite o que saiu no dado. O bônus quem soma é o
+          servidor.
         </p>
         <form
           className="dado"
           onSubmit={async (evento: FormEvent) => {
             evento.preventDefault();
-            const resposta = await enviar({ tipo: "declararIniciativa", d20: Number(d20) });
+            const resposta = await enviar({
+              tipo: "declararIniciativa",
+              d20: Number(d20),
+            });
             setRecusa(resposta.aceito ? null : resposta.motivo);
             if (resposta.aceito) {
               setD20("");
@@ -310,7 +351,9 @@ const Prateleira = ({
   linhas: readonly LinhaDaPrateleira[];
   consultar: (consulta: Consulta) => Promise<Entrada | null>;
 }) => {
-  const [entradas, setEntradas] = useState<Map<string, Entrada | null>>(new Map());
+  const [entradas, setEntradas] = useState<Map<string, Entrada | null>>(
+    new Map(),
+  );
   const [aberta, setAberta] = useState<string | null>(null);
 
   // A dependência é a assinatura e não o array: `linhas` é remontado a cada
@@ -337,7 +380,11 @@ const Prateleira = ({
   const detalhe = aberta === null ? null : (entradas.get(aberta) ?? null);
 
   return (
-    <Modal ref={ref} titulo={titulo} voltar={aberta === null ? null : () => setAberta(null)}>
+    <Modal
+      ref={ref}
+      titulo={titulo}
+      voltar={aberta === null ? null : () => setAberta(null)}
+    >
       {linhas.length === 0 && <p className="apagado">{vazio}</p>}
 
       {aberta !== null ? (
@@ -365,7 +412,9 @@ const Prateleira = ({
                   rotulo={entradas.get(chave)?.nome ?? chave}
                 />
                 <span>{entradas.get(chave)?.nome ?? chave}</span>
-                {quantidade > 1 && <span className="quanto">×{quantidade}</span>}
+                {quantidade > 1 && (
+                  <span className="quanto">×{quantidade}</span>
+                )}
               </button>
             </li>
           ))}
@@ -428,7 +477,10 @@ const BlocoDeNotas = ({
           disabled={salvo || salvando}
           onClick={async () => {
             setSalvando(true);
-            const resposta = await enviar({ tipo: "atualizarAnotacao", texto: rascunho });
+            const resposta = await enviar({
+              tipo: "atualizarAnotacao",
+              texto: rascunho,
+            });
             // Uma recusa some da tela sem isto, e o jogador fica achando que
             // escreveu no Log uma coisa que não entrou nele.
             setRecusa(resposta.aceito ? null : resposta.motivo);

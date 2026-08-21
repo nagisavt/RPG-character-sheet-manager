@@ -8,13 +8,18 @@ import type { Combate, Estado, Iniciativa, Participante } from "./tipos.js";
  * do harness. Uma segunda conta, escrita na tela, daria "faltam dois" numa
  * versão e "falta um" na outra.
  */
-export type NaChamada = { participante: Participante; iniciativa: Iniciativa | null };
+export type NaChamada = {
+  participante: Participante;
+  iniciativa: Iniciativa | null;
+};
 
 /** Dois Participantes são o mesmo quando são do mesmo tipo e do mesmo nome. */
 export const mesmo = (um: Participante, outro: Participante): boolean =>
   um.tipo === "personagem" && outro.tipo === "personagem"
     ? um.personagem === outro.personagem
-    : um.tipo === "monstro" && outro.tipo === "monstro" && um.nome === outro.nome;
+    : um.tipo === "monstro" &&
+      outro.tipo === "monstro" &&
+      um.nome === outro.nome;
 
 /**
  * Um d20 é um d20. Vinte e três não foi rolado num dado, foi digitado errado — e
@@ -34,22 +39,33 @@ export const ehD20 = (valor: number): boolean =>
  * A ordem daqui **não é a Fila de iniciativa** — a Fila é escolhida e publicada
  * pelo mestre, e é a issue #11. Esta é a lista de chamada.
  */
-export const chamada = (estado: Estado, combate: Combate): readonly NaChamada[] => [
+export const chamada = (
+  estado: Estado,
+  combate: Combate,
+): readonly NaChamada[] => [
   ...Object.values(estado.personagens).map((personagem) =>
     procurar(combate, { tipo: "personagem", personagem: personagem.id }),
   ),
-  ...combate.monstros.map((monstro) => procurar(combate, { tipo: "monstro", nome: monstro.nome })),
+  ...combate.monstros.map((monstro) =>
+    procurar(combate, { tipo: "monstro", nome: monstro.nome }),
+  ),
 ];
 
 /** Quem ainda não declarou. É o que o mestre olha para saber de quem cobrar. */
-export const faltam = (estado: Estado, combate: Combate): readonly Participante[] =>
+export const faltam = (
+  estado: Estado,
+  combate: Combate,
+): readonly Participante[] =>
   chamada(estado, combate)
     .filter((linha) => linha.iniciativa === null)
     .map((linha) => linha.participante);
 
 const procurar = (combate: Combate, participante: Participante): NaChamada => ({
   participante,
-  iniciativa: combate.iniciativas.find((qual) => mesmo(qual.participante, participante)) ?? null,
+  iniciativa:
+    combate.iniciativas.find((qual) =>
+      mesmo(qual.participante, participante),
+    ) ?? null,
 });
 
 /**
@@ -57,12 +73,21 @@ const procurar = (combate: Combate, participante: Participante): NaChamada => ({
  * mais de um leva o quanto junto — "Goblin arqueiro ×3" é uma linha só na Fila,
  * e não três Participantes.
  */
-export const nomeDe = (estado: Estado, combate: Combate, participante: Participante): string => {
+export const nomeDe = (
+  estado: Estado,
+  combate: Combate,
+  participante: Participante,
+): string => {
   if (participante.tipo === "personagem") {
-    return estado.personagens[participante.personagem]?.nome ?? participante.personagem;
+    return (
+      estado.personagens[participante.personagem]?.nome ??
+      participante.personagem
+    );
   }
 
-  const quantos = combate.monstros.find((qual) => qual.nome === participante.nome)?.quantidade ?? 1;
+  const quantos =
+    combate.monstros.find((qual) => qual.nome === participante.nome)
+      ?.quantidade ?? 1;
   return quantos > 1 ? `${participante.nome} ×${quantos}` : participante.nome;
 };
 

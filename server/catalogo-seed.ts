@@ -21,7 +21,8 @@ type Bruto = Record<string, unknown>;
 type Pagina = { next: string | null; results: Bruto[] };
 
 const baixar = async (recurso: string): Promise<Bruto[]> => {
-  let endereco: string | null = `${API}/${recurso}/?document__key=${DOCUMENTO}&limit=100`;
+  let endereco: string | null =
+    `${API}/${recurso}/?document__key=${DOCUMENTO}&limit=100`;
   const tudo: Bruto[] = [];
 
   while (endereco !== null) {
@@ -43,11 +44,13 @@ const baixar = async (recurso: string): Promise<Bruto[]> => {
 const rotulo = (valor: unknown): string => {
   if (typeof valor === "string") return valor;
   if (typeof valor === "number") return String(valor);
-  if (typeof valor === "object" && valor !== null) return rotulo((valor as Bruto)["name"]);
+  if (typeof valor === "object" && valor !== null)
+    return rotulo((valor as Bruto)["name"]);
   return "";
 };
 
-const numero = (valor: unknown): number | null => (typeof valor === "number" ? valor : null);
+const numero = (valor: unknown): number | null =>
+  typeof valor === "number" ? valor : null;
 
 const comoMagia = (bruto: Bruto): Entrada => ({
   tipo: "magia",
@@ -95,7 +98,9 @@ const comoMonstro = (bruto: Bruto): Entrada => {
     tipo: "monstro",
     chave: rotulo(bruto["key"]),
     nome: rotulo(bruto["name"]),
-    descricao: [tipo, tamanho].filter(Boolean).join(" ") + (nd === null ? "" : `, ND ${nd}`),
+    descricao:
+      [tipo, tamanho].filter(Boolean).join(" ") +
+      (nd === null ? "" : `, ND ${nd}`),
     detalhes: { tipo, tamanho, nd, vida },
   };
 };
@@ -114,4 +119,6 @@ semear(banco, entradas);
 banco.close();
 
 console.log(`\n${entradas.length} entradas no Catálogo, em dados/mesa.db.`);
-console.log("Daqui para frente nenhuma chamada externa acontece: a Sessão lê só daqui.");
+console.log(
+  "Daqui para frente nenhuma chamada externa acontece: a Sessão lê só daqui.",
+);
