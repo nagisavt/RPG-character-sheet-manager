@@ -105,8 +105,12 @@ export const ImagemOuRotulo = ({
 }) => {
   const [faltando, setFaltando] = useState(false);
 
-  // Trocou de arquivo: o próximo tem o direito de existir.
-  useEffect(() => setFaltando(false), []);
+  // Trocou de arquivo: o próximo tem o direito de existir. O `caminho` não é
+  // lido dentro do efeito, ele é o gatilho — é a troca de caminho que zera o
+  // `faltando`. Tirar da lista (o conserto que o Biome oferece) faz a falta de
+  // um arquivo grudar no próximo, que nunca chega a ser tentado.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ver acima.
+  useEffect(() => setFaltando(false), [caminho]);
 
   return (
     <span className={className}>
