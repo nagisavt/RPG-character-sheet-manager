@@ -1,8 +1,10 @@
-import { useRef, useState, type FormEvent, type Ref } from "react";
+import { type FormEvent, type Ref, useEffect, useRef, useState } from "react";
 import type { Resposta } from "../../shared/comandos.js";
 import { VERBETES } from "../../shared/linha-de-comando.js";
 import type { Personagem } from "../../shared/tipos.js";
+import { BarraDeVida, Moedas, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
+import { Combate } from "./Combate.js";
 
 /**
  * O notebook do mestre. Ele entra com a senha, digita `/dano thorin 8` e vê a
@@ -31,29 +33,41 @@ export const TelaDoMestre = () => {
     <main className="mestre">
       <header>
         <h1>Mesa</h1>
-        <span className={ligacao.estado.sessaoAtiva ? "sessao ativa" : "sessao"}>
+        <span
+          className={ligacao.estado.sessaoAtiva ? "sessao ativa" : "sessao"}
+        >
           {ligacao.estado.sessaoAtiva ? "Sessão em curso" : "Fora de sessão"}
         </span>
       </header>
 
       <ul className="personagens">
         {personagens.map((personagem) => (
-          <Vida
+          <Painel
             key={personagem.id}
             personagem={personagem}
             alterar={async (diferenca) =>
               setResposta(
-                await enviar({ tipo: "alterarVida", personagem: personagem.id, diferenca }),
+                await enviar({
+                  tipo: "alterarVida",
+                  personagem: personagem.id,
+                  diferenca,
+                }),
               )
             }
           />
         ))}
       </ul>
 
-      <LinhaDeComando digitar={async (linha) => setResposta(await digitar(linha))} />
+      <Combate estado={ligacao.estado} enviar={enviar} />
+
+      <LinhaDeComando
+        digitar={async (linha) => setResposta(await digitar(linha))}
+      />
 
       {resposta !== null && (
-        <p className={resposta.aceito ? "resposta aceita" : "resposta recusada"}>
+        <p
+          className={resposta.aceito ? "resposta aceita" : "resposta recusada"}
+        >
           {resposta.aceito ? "aceito" : resposta.motivo}
         </p>
       )}
@@ -72,6 +86,12 @@ const Portao = ({
   recusa: string | null;
 }) => {
   const [senha, setSenha] = useState("");
+  const campo = useRef<HTMLInputElement>(null);
+
+  // O portão é a primeira tela do mestre e só tem um campo: o cursor já nasce
+  // dentro dele, para a senha ser digitada sem um clique antes. Era um
+  // `autofocus` no `<input>`, e é a mesma coisa feita por nós.
+  useEffect(() => campo.current?.focus(), []);
 
   return (
     <main className="portao">
@@ -87,7 +107,7 @@ const Portao = ({
           value={senha}
           onChange={(evento) => setSenha(evento.target.value)}
           placeholder="senha do mestre"
-          autoFocus
+          ref={campo}
         />
         <button type="submit" disabled={entrando}>
           {entrando ? "entrando…" : "entrar"}
@@ -104,7 +124,9 @@ const Portao = ({
  */
 const PASSOS = [-5, -1, 1, 5] as const;
 
-const Vida = ({
+/** A faixa de um personagem no notebook do mestre: os números, as barras, as
+ * Moedas e os botões que declaram dano e cura. */
+const Painel = ({
   personagem,
   alterar,
 }: {
@@ -115,46 +137,18 @@ const Vida = ({
     <div className="nome">
       <strong>{personagem.nome}</strong>
       <span>
-        {personagem.vida} / {personagem.vidaMaxima}
-        {personagem.vidaBonus > 0 && <em className="bonus">+{personagem.vidaBonus}</em>}
+        <Numeros personagem={personagem} />
       </span>
     </div>
 
-    <div
-      className="barra"
-      role="meter"
-      aria-label={`Vida de ${personagem.nome}`}
-      aria-valuenow={personagem.vida}
-      aria-valuemin={0}
-      aria-valuemax={personagem.vidaMaxima}
-    >
-      <div style={{ width: `${(personagem.vida / personagem.vidaMaxima) * 100}%` }} />
-    </div>
+    <BarraDeVida personagem={personagem} />
 
-    {personagem.vidaBonus > 0 && (
-      <div
-        className="barra bonus"
-        role="meter"
-        aria-label={`Vida bônus de ${personagem.nome}`}
-        aria-valuenow={personagem.vidaBonus}
-        aria-valuemin={0}
-        aria-valuemax={personagem.vidaMaxima}
-      >
-        <div
-          style={{
-            // A Vida bônus não tem teto, mas a barra tem: ela satura na largura
-            // da vida do personagem. Deixar a barra crescer para fora seria
-            // reescalar a fileira inteira da TV por causa de um efeito de uma
-            // noite; quem carrega o valor exato é o `+N` do lado do nome.
-            width: `${Math.min(personagem.vidaBonus / personagem.vidaMaxima, 1) * 100}%`,
-          }}
-        />
-      </div>
-    )}
+    <Moedas personagem={personagem} />
 
     <div className="passos">
       {PASSOS.map((passo) => (
         <button
+          type="button"
           key={passo}
           onClick={() => alterar(passo)}
           aria-label={`${passo < 0 ? "Dano" : "Cura"} de ${Math.abs(passo)} em ${personagem.nome}`}
@@ -189,7 +183,11 @@ const LinhaDeComando = ({ digitar }: { digitar: (linha: string) => void }) => {
           spellCheck={false}
         />
         <button type="submit">enviar</button>
-        <button type="button" onClick={() => ajuda.current?.showModal()} aria-label="Comandos">
+        <button
+          type="button"
+          onClick={() => ajuda.current?.showModal()}
+          aria-label="Comandos"
+        >
           ?
         </button>
       </form>
@@ -209,7 +207,9 @@ const Ajuda = ({ ref }: { ref: Ref<HTMLDialogElement> }) => (
     <header>
       <h2>Comandos</h2>
       <form method="dialog">
-        <button aria-label="Fechar">×</button>
+        <button type="submit" aria-label="Fechar">
+          ×
+        </button>
       </form>
     </header>
 
@@ -230,8 +230,9 @@ const Ajuda = ({ ref }: { ref: Ref<HTMLDialogElement> }) => (
     </dl>
 
     <p className="apagado">
-      A quantidade vai sem sinal: quem diz se a vida sobe ou desce é o verbo. Os botões de cada
-      personagem fazem o mesmo que <code>/dano</code> e <code>/cura</code>.
+      A quantidade vai sem sinal: quem diz se a vida sobe ou desce é o verbo. Os
+      botões de cada personagem fazem o mesmo que <code>/dano</code> e{" "}
+      <code>/cura</code>.
     </p>
   </dialog>
 );

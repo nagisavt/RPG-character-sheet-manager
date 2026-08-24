@@ -20,13 +20,15 @@ try {
   // Sem `.env`. A conferência da senha logo abaixo é quem decide se dá para subir.
 }
 
-const PORTA = Number(process.env["PORTA"] ?? 3000);
+const PORTA = Number(process.env.PORTA ?? 3000);
 
 // A senha não tem default: um default é uma senha pública, e `/mestre` é a tela
 // que declara o que aconteceu na Mesa.
-const SENHA_MESTRE = process.env["SENHA_MESTRE"];
+const SENHA_MESTRE = process.env.SENHA_MESTRE;
 if (SENHA_MESTRE === undefined || SENHA_MESTRE === "") {
-  console.error("Falta SENHA_MESTRE: a senha do mestre vem do ambiente, não do código.");
+  console.error(
+    "Falta SENHA_MESTRE: a senha do mestre vem do ambiente, não do código.",
+  );
   console.error("  copie .env.exemplo para .env e escolha a senha lá dentro,");
   console.error('  ou exporte na mão:  $env:SENHA_MESTRE = "..."; npm run dev');
   // `tsx watch` segura o terminal depois desta saída: o processo morreu, mas a
@@ -74,14 +76,18 @@ const servidor = await iniciarServidor({
 });
 
 console.log(`Mesa no ar em http://localhost:${servidor.porta}/mestre`);
-console.log(`Log com ${servidor.log().length} Evento(s). Sessão ativa: ${servidor.estado.sessaoAtiva}`);
+console.log(
+  `Log com ${servidor.log().length} Evento(s). Sessão ativa: ${servidor.estado.sessaoAtiva}`,
+);
 
 const catalogo = servidor.catalogo();
 console.log(
   `Catálogo: ${catalogo.magia} magias, ${catalogo.item} itens, ${catalogo.monstro} monstros.`,
 );
 if (catalogo.magia + catalogo.item + catalogo.monstro === 0) {
-  console.log("  Vazio. Rode `npm run catalogo:seed` **antes** da Sessão: durante ela não há rede.");
+  console.log(
+    "  Vazio. Rode `npm run catalogo:seed` **antes** da Sessão: durante ela não há rede.",
+  );
 }
 
 const desligar = async () => {

@@ -1,4 +1,4 @@
-import type { PersonagemId } from "./tipos.js";
+import type { Monstro, Participante, PersonagemId } from "./tipos.js";
 
 /**
  * Um Comando é a intenção que um cliente envia ao servidor. Pode ser recusado.
@@ -14,7 +14,24 @@ export type Comando =
   /** `vidaBonus` é o total depois do Comando, não o quanto acrescentar: ele substitui. */
   | { tipo: "concederVidaBonus"; personagem: PersonagemId; vidaBonus: number }
   /** O nome do arquivo em `assets/cenas/`, sem extensão e sem caminho. */
-  | { tipo: "trocarCena"; cena: string };
+  | { tipo: "trocarCena"; cena: string }
+  /** `diferenca` é assinada: negativa é gasto, positiva é ganho. Quem para em zero é o decisor. */
+  | { tipo: "alterarMoedas"; personagem: PersonagemId; diferenca: number }
+  | { tipo: "iniciarCombate" }
+  | { tipo: "encerrarCombate" }
+  /** A ordem inteira, escolhida à mão. Publicar de novo substitui a Fila. */
+  | { tipo: "publicarFila"; fila: readonly Participante[] }
+  /** A lista inteira, não um acréscimo: declarar de novo substitui os Monstros de antes. */
+  | { tipo: "declararMonstros"; monstros: readonly Monstro[] }
+  /** O d20 cru que o jogador rolou na mesa. Não diz de quem é: sai do socket. */
+  | { tipo: "declararIniciativa"; d20: number }
+  /** O d20 de um Monstro, digitado pelo mestre pelo mesmo caminho. */
+  | { tipo: "declararIniciativaDoMonstro"; nome: string; d20: number }
+  /**
+   * O bloco de notas inteiro, como ele ficou. Não diz de quem é: o personagem
+   * sai do socket, e é isso que faz não existir escrever no bloco do colega.
+   */
+  | { tipo: "atualizarAnotacao"; texto: string };
 
 export type TipoDeComando = Comando["tipo"];
 

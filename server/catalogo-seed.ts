@@ -21,7 +21,8 @@ type Bruto = Record<string, unknown>;
 type Pagina = { next: string | null; results: Bruto[] };
 
 const baixar = async (recurso: string): Promise<Bruto[]> => {
-  let endereco: string | null = `${API}/${recurso}/?document__key=${DOCUMENTO}&limit=100`;
+  let endereco: string | null =
+    `${API}/${recurso}/?document__key=${DOCUMENTO}&limit=100`;
   const tudo: Bruto[] = [];
 
   while (endereco !== null) {
@@ -43,37 +44,39 @@ const baixar = async (recurso: string): Promise<Bruto[]> => {
 const rotulo = (valor: unknown): string => {
   if (typeof valor === "string") return valor;
   if (typeof valor === "number") return String(valor);
-  if (typeof valor === "object" && valor !== null) return rotulo((valor as Bruto)["name"]);
+  if (typeof valor === "object" && valor !== null)
+    return rotulo((valor as Bruto).name);
   return "";
 };
 
-const numero = (valor: unknown): number | null => (typeof valor === "number" ? valor : null);
+const numero = (valor: unknown): number | null =>
+  typeof valor === "number" ? valor : null;
 
 const comoMagia = (bruto: Bruto): Entrada => ({
   tipo: "magia",
-  chave: rotulo(bruto["key"]),
-  nome: rotulo(bruto["name"]),
-  descricao: rotulo(bruto["desc"]),
+  chave: rotulo(bruto.key),
+  nome: rotulo(bruto.name),
+  descricao: rotulo(bruto.desc),
   detalhes: {
-    nivel: numero(bruto["level"]),
-    escola: rotulo(bruto["school"]),
-    execucao: rotulo(bruto["casting_time"]),
-    alcance: rotulo(bruto["range_text"]),
-    duracao: rotulo(bruto["duration"]),
-    concentracao: bruto["concentration"] === true,
-    ritual: bruto["ritual"] === true,
+    nivel: numero(bruto.level),
+    escola: rotulo(bruto.school),
+    execucao: rotulo(bruto.casting_time),
+    alcance: rotulo(bruto.range_text),
+    duracao: rotulo(bruto.duration),
+    concentracao: bruto.concentration === true,
+    ritual: bruto.ritual === true,
   },
 });
 
 const comoItem = (bruto: Bruto): Entrada => ({
   tipo: "item",
-  chave: rotulo(bruto["key"]),
-  nome: rotulo(bruto["name"]),
-  descricao: rotulo(bruto["desc"]),
+  chave: rotulo(bruto.key),
+  nome: rotulo(bruto.name),
+  descricao: rotulo(bruto.desc),
   detalhes: {
-    categoria: rotulo(bruto["category"]),
-    custo: rotulo(bruto["cost"]),
-    peso: rotulo(bruto["weight"]),
+    categoria: rotulo(bruto.category),
+    custo: rotulo(bruto.cost),
+    peso: rotulo(bruto.weight),
   },
 });
 
@@ -86,16 +89,18 @@ const comoItem = (bruto: Bruto): Entrada => ({
  * com nome e bônus, e não vem daqui (CONTEXT.md).
  */
 const comoMonstro = (bruto: Bruto): Entrada => {
-  const tipo = rotulo(bruto["type"]);
-  const tamanho = rotulo(bruto["size"]);
-  const nd = numero(bruto["challenge_rating"]);
-  const vida = numero(bruto["hit_points"]);
+  const tipo = rotulo(bruto.type);
+  const tamanho = rotulo(bruto.size);
+  const nd = numero(bruto.challenge_rating);
+  const vida = numero(bruto.hit_points);
 
   return {
     tipo: "monstro",
-    chave: rotulo(bruto["key"]),
-    nome: rotulo(bruto["name"]),
-    descricao: [tipo, tamanho].filter(Boolean).join(" ") + (nd === null ? "" : `, ND ${nd}`),
+    chave: rotulo(bruto.key),
+    nome: rotulo(bruto.name),
+    descricao:
+      [tipo, tamanho].filter(Boolean).join(" ") +
+      (nd === null ? "" : `, ND ${nd}`),
     detalhes: { tipo, tamanho, nd, vida },
   };
 };
@@ -114,4 +119,6 @@ semear(banco, entradas);
 banco.close();
 
 console.log(`\n${entradas.length} entradas no Catálogo, em dados/mesa.db.`);
-console.log("Daqui para frente nenhuma chamada externa acontece: a Sessão lê só daqui.");
+console.log(
+  "Daqui para frente nenhuma chamada externa acontece: a Sessão lê só daqui.",
+);

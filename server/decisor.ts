@@ -1,5 +1,14 @@
 import type { Comando } from "../shared/comandos.js";
-import type { Autor, Estado, EventoNovo, Personagem } from "../shared/tipos.js";
+import { chamada, chaveDe, ehD20 } from "../shared/combate.js";
+import type {
+  Autor,
+  Combate,
+  Estado,
+  EventoNovo,
+  Monstro,
+  Participante,
+  Personagem,
+} from "../shared/tipos.js";
 
 /**
  * A decisão sobre um Comando: os Eventos que ele produz, ou a recusa.
@@ -17,27 +26,44 @@ export type Decisao = { eventos: EventoNovo[] } | { recusa: string };
  * da identidade do socket: um Comando que carregasse o próprio autor seria um
  * jogador podendo se declarar mestre.
  */
-export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao => {
+export const decisor = (
+  estado: Estado,
+  comando: Comando,
+  autor: Autor,
+): Decisao => {
   switch (comando.tipo) {
     case "iniciarSessao":
       if (estado.sessaoAtiva) return { recusa: "A Sessão já está em curso" };
-      return { eventos: [{ tipo: "SessaoIniciada", autor, audiencia: ["publico"] }] };
+      return {
+        eventos: [{ tipo: "SessaoIniciada", autor, audiencia: ["publico"] }],
+      };
 
     case "finalizarSessao":
       if (!estado.sessaoAtiva) return { recusa: "Nenhuma Sessão em curso" };
-      return { eventos: [{ tipo: "SessaoFinalizada", autor, audiencia: ["publico"] }] };
+      return {
+        eventos: [{ tipo: "SessaoFinalizada", autor, audiencia: ["publico"] }],
+      };
 
     case "trocarCena": {
       // O nome vira caminho de arquivo e URL. Um `../` daqui sairia de
       // `assets/cenas/` e ficaria gravado para sempre num Log que não se apaga.
       if (!/^[a-z0-9-]+$/.test(comando.cena)) {
-        return { recusa: `'${comando.cena}' não é nome de Cena: só minúsculas, números e hífen` };
+        return {
+          recusa: `'${comando.cena}' não é nome de Cena: só minúsculas, números e hífen`,
+        };
       }
       if (estado.cena === comando.cena) {
         return { recusa: `A Cena '${comando.cena}' já está no ar` };
       }
       return {
-        eventos: [{ tipo: "CenaTrocada", cena: comando.cena, autor, audiencia: ["publico"] }],
+        eventos: [
+          {
+            tipo: "CenaTrocada",
+            cena: comando.cena,
+            autor,
+            audiencia: ["publico"],
+          },
+        ],
       };
     }
 
@@ -71,6 +97,161 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
       };
     }
 
+    case "alterarMoedas": {
+      const personagem = estado.personagens[comando.personagem];
+      if (personagem === undefined) {
+        return { recusa: `Personagem desconhecido: ${comando.personagem}` };
+      }
+      // Mesmo motivo do `alterarVida`: um `NaN` gravado num Log append-only não
+      // tem como ser corrigido depois, e envenena todo replay da campanha.
+      if (!Number.isInteger(comando.diferenca)) {
+        return {
+          recusa: "A diferença de Moedas precisa ser um número inteiro",
+        };
+      }
+      // `null` é o sigilo da projeção, e o decisor roda no servidor, sobre o
+      // estado inteiro — aqui ele nunca aparece. A guarda existe para que o dia
+      // em que alguém decidir por um Evento a partir de um estado projetado
+      // seja uma recusa alta, e não uma conta feita com o buraco.
+      if (personagem.moedas === null) {
+        return { recusa: "Este estado não conhece as Moedas deste personagem" };
+      }
+
+      // Para em zero, como o dano (ADR-0001): bolso negativo é um estado que não
+      // existe. O gasto declarado inteiro fica gravado do mesmo jeito.
+      const moedas = Math.max(personagem.moedas + comando.diferenca, 0);
+      return {
+        eventos: [
+          {
+            tipo: "MoedasAlteradas",
+            personagem: comando.personagem,
+            declarado: comando.diferenca,
+            moedas,
+            autor,
+            // O bolso é de quem o carrega. A vida é pública porque está na TV,
+            // em barra; as Moedas não estão em tela nenhuma que a mesa olhe
+            // junto, então não há motivo para elas saírem daqui para os outros.
+            // O mestre lê tudo por ser o mestre, não por estar nesta lista.
+            audiencia: [{ privado: comando.personagem }],
+          },
+        ],
+      };
+    }
+
+    case "iniciarCombate":
+      if (estado.combate !== null)
+        return { recusa: "O Combate já está em curso" };
+      return {
+        eventos: [{ tipo: "CombateIniciado", autor, audiencia: ["publico"] }],
+      };
+
+    case "encerrarCombate":
+      if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
+      return {
+        eventos: [{ tipo: "CombateEncerrado", autor, audiencia: ["publico"] }],
+      };
+
+    case "publicarFila": {
+      if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
+
+      const problema = conferirFila(estado, estado.combate, comando.fila);
+      if (problema !== null) return { recusa: problema };
+
+      return {
+        eventos: [
+          {
+            tipo: "FilaPublicada",
+            fila: comando.fila,
+            autor,
+            // Pública: a Fila é o que a TV mostra, no meio da mesa. Os números
+            // da rolagem é que não são dela.
+            audiencia: ["publico"],
+          },
+        ],
+      };
+    }
+
+    case "declararMonstros": {
+      if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
+
+      const problema = conferirMonstros(comando.monstros);
+      if (problema !== null) return { recusa: problema };
+
+      return {
+        eventos: [
+          {
+            tipo: "MonstrosDeclarados",
+            monstros: comando.monstros,
+            autor,
+            // O nome é público: a Fila vai mostrar ele na TV. Os números da
+            // rolagem é que não são da Mesa (ver `IniciativaDeclarada`).
+            audiencia: ["publico"],
+          },
+        ],
+      };
+    }
+
+    case "declararIniciativa": {
+      if (autor.tipo !== "jogador")
+        return { recusa: "A iniciativa é de quem rolou o dado" };
+      const personagem = estado.personagens[autor.personagem];
+      if (personagem === undefined) {
+        return { recusa: `Personagem desconhecido: ${autor.personagem}` };
+      }
+
+      return iniciativa(estado, {
+        participante: { tipo: "personagem", personagem: autor.personagem },
+        d20: comando.d20,
+        // O bônus sai da Ficha, pelo estado, e nunca do que o cliente mandou.
+        bonus: personagem.bonusDeIniciativa,
+        autor,
+        // O dono vê a própria rolagem confirmada; o mestre vê todas por ser o
+        // mestre. A Mesa não vê número nenhum — ela vê nomes em ordem.
+        tambemVeem: [{ privado: autor.personagem }],
+      });
+    }
+
+    case "declararIniciativaDoMonstro": {
+      const monstro = estado.combate?.monstros.find(
+        (qual) => qual.nome === comando.nome,
+      );
+      if (monstro === undefined) {
+        return { recusa: `Monstro não declarado: ${comando.nome}` };
+      }
+
+      return iniciativa(estado, {
+        participante: { tipo: "monstro", nome: monstro.nome },
+        d20: comando.d20,
+        bonus: monstro.bonusDeIniciativa,
+        autor,
+        // Só o mestre: o d20 do Monstro é o que ele rolou atrás do biombo.
+        tambemVeem: [],
+      });
+    }
+
+    case "atualizarAnotacao": {
+      // O personagem sai do autor, que sai do socket. Um Comando que carregasse
+      // o próprio personagem seria um jogador escrevendo no bloco de outro.
+      if (autor.tipo !== "jogador") {
+        return { recusa: "O bloco de notas é do jogador" };
+      }
+
+      return {
+        eventos: [
+          {
+            tipo: "AnotacaoAtualizada",
+            personagem: autor.personagem,
+            texto: comando.texto,
+            autor,
+            // A audiência é gravada aqui, uma vez, e é o que faz o Evento não
+            // sair do servidor para mais ninguém. O mestre lê tudo por ser o
+            // mestre, não por estar nesta lista.
+            audiencia: [{ privado: autor.personagem }],
+          },
+        ],
+      };
+    }
+
     case "concederVidaBonus": {
       const personagem = estado.personagens[comando.personagem];
       if (personagem === undefined) {
@@ -79,7 +260,9 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
       // Zero é válido: é o efeito que acabou. Negativo não — tirar vida é
       // `/dano`, e um pote negativo é um estado que não existe.
       if (!Number.isInteger(comando.vidaBonus) || comando.vidaBonus < 0) {
-        return { recusa: "A Vida bônus precisa ser um inteiro de zero para cima" };
+        return {
+          recusa: "A Vida bônus precisa ser um inteiro de zero para cima",
+        };
       }
 
       return {
@@ -96,6 +279,100 @@ export const decisor = (estado: Estado, comando: Comando, autor: Autor): Decisao
       };
     }
   }
+};
+
+/**
+ * Uma iniciativa que entrou, com o bônus já somado — a primeira linha da
+ * aritmética permitida (ADR-0001). O d20 cru fica gravado junto, porque foi ele
+ * que a mesa rolou e digitou.
+ *
+ * `audiencia` chega com quem mais vê além do mestre, que vê tudo por ser o
+ * mestre e não por estar numa lista.
+ */
+const iniciativa = (
+  estado: Estado,
+  {
+    participante,
+    d20,
+    bonus,
+    autor,
+    tambemVeem,
+  }: {
+    participante: Participante;
+    d20: number;
+    bonus: number;
+    autor: Autor;
+    tambemVeem: EventoNovo["audiencia"];
+  },
+): Decisao => {
+  if (estado.combate === null) return { recusa: "Nenhum Combate em curso" };
+  if (!ehD20(d20)) return { recusa: "O d20 é um inteiro de 1 a 20" };
+
+  return {
+    eventos: [
+      {
+        tipo: "IniciativaDeclarada",
+        participante,
+        d20,
+        resultado: d20 + bonus,
+        autor,
+        audiencia: ["mestre", ...tambemVeem],
+      },
+    ],
+  };
+};
+
+/**
+ * O que impede uma ordem de virar Fila, ou `null` se ela serve.
+ *
+ * O que **não** se confere aqui: se todo mundo já declarou. O mestre publica com
+ * quem está na mesa e republica quando o atrasado chegar — esperar seria o app
+ * decidindo quando o Combate começa, e ele não decide (ADR-0001).
+ */
+const conferirFila = (
+  estado: Estado,
+  combate: Combate,
+  fila: readonly Participante[],
+): string | null => {
+  if (fila.length === 0) return "A Fila está vazia";
+
+  const conhecidos = new Set(
+    chamada(estado, combate).map(({ participante }) => chaveDe(participante)),
+  );
+
+  const vistos = new Set<string>();
+  for (const participante of fila) {
+    const chave = chaveDe(participante);
+    if (!conhecidos.has(chave)) {
+      return `'${chave}' não está neste Combate`;
+    }
+    // Um Participante duas vezes na Fila seria a mesma pessoa agindo em dois
+    // lugares da ordem, e a mesa não teria como saber qual das duas vale.
+    if (vistos.has(chave)) return `'${chave}' aparece duas vezes na Fila`;
+    vistos.add(chave);
+  }
+
+  return null;
+};
+
+/** O que impede uma lista de Monstros de virar Fila, ou `null` se ela serve. */
+const conferirMonstros = (monstros: readonly Monstro[]): string | null => {
+  for (const monstro of monstros) {
+    if (monstro.nome.trim() === "") return "Todo Monstro precisa de nome";
+    if (!Number.isInteger(monstro.quantidade) || monstro.quantidade < 1) {
+      return `'${monstro.nome}': a quantidade é um inteiro de 1 para cima`;
+    }
+    if (!Number.isInteger(monstro.bonusDeIniciativa)) {
+      return `'${monstro.nome}': o bônus de iniciativa é um número inteiro`;
+    }
+  }
+
+  // Dois Monstros com o mesmo nome seriam um Participante só na Fila, e a
+  // iniciativa de um sobrescreveria a do outro. "Goblin arqueiro" e "Goblin
+  // lanceiro" é o que a mesa já fala em voz alta.
+  const nomes = monstros.map((monstro) => monstro.nome);
+  const repetido = nomes.find((nome, ordem) => nomes.indexOf(nome) !== ordem);
+  return repetido === undefined ? null : `Dois Monstros chamados '${repetido}'`;
 };
 
 /**

@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import type { Personagem } from "../../shared/tipos.js";
+import { useEffect } from "react";
+import { chaveDe, nomeDe } from "../../shared/combate.js";
+import type { Combate, Estado, Personagem } from "../../shared/tipos.js";
+import { BarraDeVida, ImagemOuRotulo, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 
 /**
@@ -20,7 +22,9 @@ export const TelaDaMesa = () => {
     return (
       <div className="tv">
         <p className="avisando">
-          {ligacao.situacao === "recusado" ? ligacao.motivo : "Ligando na Mesa…"}
+          {ligacao.situacao === "recusado"
+            ? ligacao.motivo
+            : "Ligando na Mesa…"}
         </p>
       </div>
     );
@@ -28,15 +32,25 @@ export const TelaDaMesa = () => {
 
   const personagens = Object.values(ligacao.estado.personagens);
 
+  const combate = ligacao.estado.combate;
+
   return (
     <div className="tv">
-      <Cena cena={ligacao.estado.cena} />
+      {/* A Fila publicada troca o fundo; a Cena continua embaixo, esperando o
+          Combate acabar. As barras de vida ficam nos dois layouts. */}
+      {combate?.fila == null ? (
+        <Cena cena={ligacao.estado.cena} />
+      ) : (
+        <Fila estado={ligacao.estado} combate={combate} />
+      )}
       <ul className="vidas">
         {personagens.map((personagem) => (
           <Barra
             key={personagem.id}
             personagem={personagem}
-            maiorDaMesa={Math.max(...personagens.map((outro) => outro.vidaMaxima))}
+            maiorDaMesa={Math.max(
+              ...personagens.map((outro) => outro.vidaMaxima),
+            )}
           />
         ))}
       </ul>
@@ -50,29 +64,41 @@ export const TelaDaMesa = () => {
  * placeholder combinado. Some sozinho no dia em que o PNG entrar na pasta.
  */
 const Cena = ({ cena }: { cena: string | null }) => {
-  const [faltando, setFaltando] = useState(false);
-
-  // Trocou de Cena: a próxima tem o direito de existir.
-  useEffect(() => setFaltando(false), [cena]);
-
   if (cena === null) {
     return (
-      <div className="cena">
+      <span className="cena">
         <span className="rotulo">sem Cena</span>
-      </div>
+      </span>
     );
   }
 
   return (
-    <div className="cena">
-      {faltando ? (
-        <span className="rotulo">{cena}</span>
-      ) : (
-        <img src={`/cenas/${cena}.png`} alt="" onError={() => setFaltando(true)} />
-      )}
-    </div>
+    <ImagemOuRotulo
+      className="cena"
+      caminho={`/cenas/${cena}.png`}
+      rotulo={cena}
+    />
   );
 };
+
+/**
+ * A Fila de iniciativa em tela cheia: os nomes, na ordem que o mestre escolheu.
+ *
+ * **Sem número nenhum** — nem o que cada um rolou, nem a posição. E nada aqui
+ * acompanha de quem é a vez: não existe noção de turno neste app, e destacar
+ * alguém seria inventar uma. Quem diz "é sua vez" é a pessoa na cabeceira.
+ */
+const Fila = ({ estado, combate }: { estado: Estado; combate: Combate }) => (
+  <div className="fila">
+    <ol>
+      {(combate.fila ?? []).map((participante) => (
+        <li key={chaveDe(participante)}>
+          {nomeDe(estado, combate, participante)}
+        </li>
+      ))}
+    </ol>
+  </div>
+);
 
 /**
  * A vida máxima define o **comprimento** da barra, comparada com a maior da
@@ -83,45 +109,20 @@ const Cena = ({ cena }: { cena: string | null }) => {
  * A Vida bônus é uma segunda barra, branca, logo abaixo — e só aparece quando
  * existe: quem não tem nenhuma não ganha uma faixa vazia para a mesa decifrar.
  */
-const Barra = ({ personagem, maiorDaMesa }: { personagem: Personagem; maiorDaMesa: number }) => (
+const Barra = ({
+  personagem,
+  maiorDaMesa,
+}: {
+  personagem: Personagem;
+  maiorDaMesa: number;
+}) => (
   <li style={{ width: `${(personagem.vidaMaxima / maiorDaMesa) * 100}%` }}>
     <div className="nome">
       <span>{personagem.nome}</span>
       <span>
-        {personagem.vida} / {personagem.vidaMaxima}
-        {personagem.vidaBonus > 0 && <em className="bonus">+{personagem.vidaBonus}</em>}
+        <Numeros personagem={personagem} />
       </span>
     </div>
-    <div
-      className="barra"
-      role="meter"
-      aria-label={`Vida de ${personagem.nome}`}
-      aria-valuenow={personagem.vida}
-      aria-valuemin={0}
-      aria-valuemax={personagem.vidaMaxima}
-    >
-      <div style={{ width: `${(personagem.vida / personagem.vidaMaxima) * 100}%` }} />
-    </div>
-
-    {personagem.vidaBonus > 0 && (
-      <div
-        className="barra bonus"
-        role="meter"
-        aria-label={`Vida bônus de ${personagem.nome}`}
-        aria-valuenow={personagem.vidaBonus}
-        aria-valuemin={0}
-        aria-valuemax={personagem.vidaMaxima}
-      >
-        <div
-          style={{
-            // A Vida bônus não tem teto, mas a barra tem: ela satura na largura
-            // da vida do personagem. Deixar a barra crescer para fora seria
-            // reescalar a fileira inteira da TV por causa de um efeito de uma
-            // noite; quem carrega o valor exato é o `+N` do lado do nome.
-            width: `${Math.min(personagem.vidaBonus / personagem.vidaMaxima, 1) * 100}%`,
-          }}
-        />
-      </div>
-    )}
+    <BarraDeVida personagem={personagem} />
   </li>
 );

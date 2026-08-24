@@ -6,8 +6,13 @@ import type { Estado, Ficha } from "./tipos.js";
  */
 export const estadoInicial = (fichas: readonly Ficha[]): Estado => ({
   sessaoAtiva: false,
-  personagens: Object.fromEntries(fichas.map((ficha) => [ficha.id, personagemDe(ficha)])),
+  personagens: Object.fromEntries(
+    fichas.map((ficha) => [ficha.id, personagemDe(ficha)]),
+  ),
   cena: null,
+  // Fora de Combate. Ele nasce de um `CombateIniciado` e some quando o mestre
+  // encerra — nunca da Ficha, que não sabe de que noite se está falando.
+  combate: null,
 });
 
 /**
@@ -23,8 +28,16 @@ const personagemDe = (ficha: Ficha) => ({
   nome: ficha.nome,
   vida: ficha.vidaMaxima,
   vidaMaxima: ficha.vidaMaxima,
+  bonusDeIniciativa: ficha.bonusDeIniciativa,
   // Zero, e não um campo da Ficha: a Vida bônus é concedida durante a Sessão e
   // gasta na mesma noite. Começar a campanha com ela seria a Ficha inventando
   // um fato que ninguém declarou.
   vidaBonus: 0,
+  // As Moedas vêm da Ficha pelo mesmo motivo da vida: é com elas que o
+  // personagem chegou no começo da campanha. O que ele gastou depois é fato da
+  // Sessão, e fato da Sessão é Log.
+  moedas: ficha.moedas,
+  // Vazio, e não da Ficha: o que o jogador escreveu é fato da Sessão também. A
+  // Ficha é a folha de papel, não o caderno dele.
+  anotacao: "",
 });

@@ -29,7 +29,7 @@ Quem pode ver um Evento: `publico`, `privado:<personagem>` ou `mestre`. O servid
 _Avoid_: visibilidade, permissão, escopo
 
 **Combate**:
-O modo em que a Mesa entra quando o mestre declara os monstros, e do qual só sai quando o mestre encerra. Enquanto dura, a TV mostra a Fila de iniciativa no lugar da cena.
+O modo em que a Mesa entra quando o mestre o inicia, e do qual só sai quando ele encerra. Ele começa vazio: os Monstros e as iniciativas entram depois, cada um no seu Evento. Enquanto dura, a TV mostra a Fila de iniciativa no lugar da cena.
 _Avoid_: encontro, batalha, luta
 
 **Participante**:
@@ -56,6 +56,10 @@ _Avoid_: vida temporária, pontos temporários, escudo
 O dinheiro de um personagem, guardado como um número só. Não existe denominação: converter prata em ouro acontece na cabeça do mestre, antes de registrar.
 _Avoid_: PO, ouro, dinheiro, tesouro
 
+**Anotação**:
+O bloco de notas de um jogador, escrito por ele no celular e privado de verdade: o Evento nasce com audiência `privado:<personagem>` e nunca sai do servidor para mais ninguém. O mestre lê tudo. É um texto só, guardado inteiro a cada gravada — não um diff, e não uma lista de notas.
+_Avoid_: nota, comentário, diário (rascunho é outra coisa: o que está digitado na tela e ainda não foi salvo)
+
 **Catálogo**:
 Os dados de regra do SRD — magias, itens, monstros. Somente leitura, iguais para qualquer mesa, e nunca entram no Log.
 _Avoid_: compêndio, biblioteca, referência
@@ -63,3 +67,15 @@ _Avoid_: compêndio, biblioteca, referência
 **Ficha**:
 A folha de papel de um personagem, digitalizada à mão pelo mestre e versionada no repositório. É entrada do sistema, não algo que o app edita — não existe, nem existirá, tela de cadastro de ficha.
 _Avoid_: personagem (a Ficha é só a parte estática dele), cadastro, perfil
+
+**Chave do Catálogo**:
+O identificador de uma entrada do SRD, como `srd-2024_rope`. É o que a Ficha guarda: nome e descrição saem do Catálogo na hora de exibir, e quem digita a Ficha não redigita a regra.
+_Avoid_: id, slug, código
+
+**Inventário**:
+O que o personagem carrega, como uma lista de Chaves do Catálogo com quantidade. Vive na Ficha, e o v1 só o lê: não existe pegar, largar nem comprar.
+_Avoid_: mochila, bolsa, itens (o item é a entrada do Catálogo)
+
+**Equipado**:
+O mapa de slots do personagem — mão principal, mão secundária, corpo — com a Chave do Catálogo em cada um, ou nada. Vive na Ficha e o v1 só lê: não existe botão de equipar nem de desequipar, porque vestir a armadura acontece na mesa e não no app.
+_Avoid_: loadout, build, itens equipados

@@ -3,14 +3,24 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { io, type Socket } from "socket.io-client";
+import { semear } from "../server/catalogo.js";
+import { iniciarServidor } from "../server/servidor.js";
 import type { Consulta, Entrada } from "../shared/catalogo.js";
 import type { Comando, Resposta } from "../shared/comandos.js";
-import type { Credencial, Handshake, Snapshot, Transmissao } from "../shared/identidade.js";
+import type {
+  Credencial,
+  Handshake,
+  Snapshot,
+  Transmissao,
+} from "../shared/identidade.js";
 import { lerLinha } from "../shared/linha-de-comando.js";
 import { reducer } from "../shared/reducer.js";
-import { MESA_ID, type Estado, type Evento, type Ficha } from "../shared/tipos.js";
-import { semear } from "../server/catalogo.js";
-import { iniciarServidor, type Servidor } from "../server/servidor.js";
+import {
+  type Estado,
+  type Evento,
+  type Ficha,
+  MESA_ID,
+} from "../shared/tipos.js";
 
 /**
  * O harness de Mesa: a única costura de teste do projeto.
@@ -51,6 +61,11 @@ export type Cliente = {
   digitar: (linha: string) => Promise<Resposta>;
   /** O Catálogo, pelo mesmo socket. Não muda nada: nenhum Evento sai daqui. */
   consultar: (consulta: Consulta) => Promise<Entrada | null>;
+  /**
+   * A Ficha deste socket. `null` para quem não é jogador — a TV não é de
+   * ninguém, e o mestre lê as Fichas do arquivo, que é dele.
+   */
+  minhaFicha: () => Promise<Ficha | null>;
   /** O celular que dormiu e acordou: cai e volta sozinho, com o servidor no ar. */
   reconectar: () => Promise<void>;
   desconectar: () => void;
@@ -70,7 +85,10 @@ export type OpcoesDaMesa = {
 
 export const criarMesa = async (opcoes: OpcoesDaMesa): Promise<Mesa> => {
   const senhaDoMestre = opcoes.senhaDoMestre ?? "1234";
-  const pasta = opcoes.caminhoDoLog === undefined ? await mkdtemp(join(tmpdir(), "mesa-")) : null;
+  const pasta =
+    opcoes.caminhoDoLog === undefined
+      ? await mkdtemp(join(tmpdir(), "mesa-"))
+      : null;
   const caminhoDoLog = opcoes.caminhoDoLog ?? join(pasta!, "mesa.db");
 
   if (opcoes.catalogo !== undefined) {
@@ -98,7 +116,11 @@ export const criarMesa = async (opcoes: OpcoesDaMesa): Promise<Mesa> => {
     caminhoDoLog,
 
     conectar: async (credencial) => {
-      const cliente = await conectarCliente(porta, { mesaId: MESA_ID, ...credencial }, sincronizar);
+      const cliente = await conectarCliente(
+        porta,
+        { mesaId: MESA_ID, ...credencial },
+        sincronizar,
+      );
       clientes.push(cliente);
       return cliente;
     },
@@ -107,7 +129,12 @@ export const criarMesa = async (opcoes: OpcoesDaMesa): Promise<Mesa> => {
       if (fichasEditadas !== undefined) fichas = fichasEditadas;
       const voltaram = clientes.map((cliente) => cliente.aguardarSnapshot());
       await servidor.encerrar();
-      servidor = await iniciarServidor({ fichas, caminhoDoLog, senhaDoMestre, porta });
+      servidor = await iniciarServidor({
+        fichas,
+        caminhoDoLog,
+        senhaDoMestre,
+        porta,
+      });
       await Promise.all(voltaram);
     },
 
@@ -203,6 +230,7 @@ const conectarCliente = async (
     },
     enviar,
     consultar: (consulta) => socket.emitWithAck("consultar", consulta),
+    minhaFicha: () => socket.emitWithAck("minhaFicha"),
     digitar: async (linha) => {
       const leitura = lerLinha(linha);
       // Uma linha que não é comando é uma recusa como outra qualquer para quem
@@ -211,12 +239,15 @@ const conectarCliente = async (
       return enviar(leitura.comando);
     },
     reconectar: async () => {
-      const voltou = new Promise<void>((pronto) => socket.once("snapshot", () => pronto()));
+      const voltou = new Promise<void>((pronto) =>
+        socket.once("snapshot", () => pronto()),
+      );
       socket.disconnect().connect();
       await voltou;
     },
     desconectar: () => socket.disconnect(),
     aguardarAte,
-    aguardarSnapshot: () => new Promise<void>((pronto) => socket.once("snapshot", () => pronto())),
+    aguardarSnapshot: () =>
+      new Promise<void>((pronto) => socket.once("snapshot", () => pronto())),
   };
 };

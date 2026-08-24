@@ -1,23 +1,23 @@
 import {
   createServer,
   type IncomingMessage,
-  type Server as ServidorHttp,
   type ServerResponse,
+  type Server as ServidorHttp,
 } from "node:http";
 import { Server as ServidorSocket, type Socket } from "socket.io";
 import type { Consulta, Entrada, TipoDoCatalogo } from "../shared/catalogo.js";
 import type { Comando, Resposta } from "../shared/comandos.js";
 import { estadoInicial } from "../shared/estado.js";
 import {
-  autorDe,
   type Apresentacao,
+  autorDe,
   type Identidade,
   type Snapshot,
   type Transmissao,
 } from "../shared/identidade.js";
 import { reconstruir, reducer } from "../shared/reducer.js";
-import { MESA_ID, type Estado, type Ficha } from "../shared/tipos.js";
-import { podeVer } from "./audiencia.js";
+import { type Estado, type Ficha, MESA_ID } from "../shared/tipos.js";
+import { podeVer, projetar } from "./audiencia.js";
 import { autorizar } from "./autorizacao.js";
 import { abrirCatalogo } from "./catalogo.js";
 import { decisor } from "./decisor.js";
@@ -40,7 +40,13 @@ export type OpcoesDoServidor = {
 
 export type Servidor = {
   porta: number;
-  /** O estado da Mesa, em memória. O SQLite guarda só o Log. */
+  /**
+   * O estado da Mesa, em memória. O SQLite guarda só o Log.
+   *
+   * **Sai sem projeção**, com a Anotação de todo mundo dentro. Quem lê isto é o
+   * processo — o `dev.ts` imprimindo a subida, um teste conferindo —, nunca um
+   * socket: o que sai pela rede sai por `projetar` ou por `podeVer`.
+   */
   readonly estado: Estado;
   log: () => ReturnType<Store["ler"]>;
   /** Quantas entradas o Catálogo tem, por tipo. Zero quer dizer que falta semear. */
@@ -50,7 +56,9 @@ export type Servidor = {
 
 type Sessao = { identidade: Identidade };
 
-export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servidor> => {
+export const iniciarServidor = async (
+  opcoes: OpcoesDoServidor,
+): Promise<Servidor> => {
   const store = abrirStore({ caminho: opcoes.caminhoDoLog });
   const catalogo = abrirCatalogo(opcoes.caminhoDoLog);
 
@@ -63,47 +71,77 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
   // As telas entram como listener do http **antes** do socket.io: o engine.io
   // guarda quem já estava ali e só repassa o que não for dele. Registrar depois
   // faria as duas coisas responderem à mesma requisição.
-  const http = opcoes.paginas === undefined ? createServer() : createServer(opcoes.paginas);
+  const http =
+    opcoes.paginas === undefined
+      ? createServer()
+      : createServer(opcoes.paginas);
   const io = new ServidorSocket<
-    { comando: ComandoDoCliente; consultar: ConsultaDoCliente },
+    {
+      comando: ComandoDoCliente;
+      consultar: ConsultaDoCliente;
+      minhaFicha: FichaDoCliente;
+    },
     EventosDoServidor,
     never,
     Sessao
-  >(
-    http,
-    { serveClient: false },
-  );
+  >(http, { serveClient: false });
 
   const telasLigadas = () => io.of("/").sockets.values();
 
   io.use((socket, seguir) => {
-    const identidade = identificar(socket.handshake.auth as Apresentacao, opcoes);
+    const identidade = identificar(
+      socket.handshake.auth as Apresentacao,
+      opcoes,
+    );
     if (typeof identidade === "string") return seguir(new Error(identidade));
     socket.data.identidade = identidade;
     seguir();
   });
 
+  const fichaDe = (identidade: Identidade): Ficha | null =>
+    identidade.como === "jogador"
+      ? (opcoes.fichas.find((ficha) => ficha.id === identidade.personagem) ??
+        null)
+      : null;
+
   io.on("connection", (socket) => {
-    socket.emit("snapshot", { estado, ate });
-    socket.on("comando", (comando, responder) => responder(processar(socket, comando)));
+    // Já projetado: o que este socket não tem direito de ver não sai daqui.
+    socket.emit("snapshot", {
+      estado: projetar(estado, socket.data.identidade),
+      ate,
+    });
+    socket.on("comando", (comando, responder) =>
+      responder(processar(socket, comando)),
+    );
     // Consultar o Catálogo não é Comando: não muda nada, não vira Evento e não
     // passa por autorização — é a mesma regra do SRD para qualquer tela.
     socket.on("consultar", (consulta, responder) =>
       responder(ehConsulta(consulta) ? catalogo.consultar(consulta) : null),
     );
+    // A Ficha também não é Comando: ela não muda nada e não entra no Log
+    // (ADR-0002). O pedido não carrega personagem nenhum — quem é ele já está
+    // amarrado no socket, e é por isso que não existe pedir a Ficha do colega.
+    socket.on("minhaFicha", (responder) =>
+      responder(fichaDe(socket.data.identidade)),
+    );
   });
 
-  const processar = (socket: Socket<never, EventosDoServidor, never, Sessao>, comando: Comando) => {
+  const processar = (
+    socket: Socket<never, EventosDoServidor, never, Sessao>,
+    comando: Comando,
+  ) => {
     const { identidade } = socket.data;
 
     const autorizacao = autorizar(identidade, comando.tipo);
     if (!autorizacao.aceito) return autorizacao;
 
     const autor = autorDe(identidade);
-    if (autor === null) return { aceito: false, motivo: "Esta tela não envia Comandos" } as const;
+    if (autor === null)
+      return { aceito: false, motivo: "Esta tela não envia Comandos" } as const;
 
     const decisao = decisor(estado, comando, autor);
-    if ("recusa" in decisao) return { aceito: false, motivo: decisao.recusa } as const;
+    if ("recusa" in decisao)
+      return { aceito: false, motivo: decisao.recusa } as const;
 
     for (const novo of decisao.eventos) {
       const evento = store.gravar(novo);
@@ -113,7 +151,10 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
       // "aceito", a própria transmissão dele já chegou.
       for (const tela of telasLigadas()) {
         const visivel = podeVer(evento, tela.data.identidade);
-        tela.emit("transmissao", { ate: evento.id, evento: visivel ? evento : null });
+        tela.emit("transmissao", {
+          ate: evento.id,
+          evento: visivel ? evento : null,
+        });
       }
     }
     return { aceito: true } as const;
@@ -140,13 +181,18 @@ export const iniciarServidor = async (opcoes: OpcoesDoServidor): Promise<Servido
  * A identidade é amarrada aqui, uma vez, e nunca mais lida do conteúdo de um
  * Comando. Devolve a `Identidade` ou o motivo da recusa.
  */
-const identificar = (apresentacao: Apresentacao, opcoes: OpcoesDoServidor): Identidade | string => {
+const identificar = (
+  apresentacao: Apresentacao,
+  opcoes: OpcoesDoServidor,
+): Identidade | string => {
   if (apresentacao.mesaId !== MESA_ID) return "Mesa desconhecida";
 
   switch (apresentacao.como) {
     case "mestre":
       // A senha vem de variável de ambiente e nunca do cliente.
-      return apresentacao.senha === opcoes.senhaDoMestre ? { como: "mestre" } : "Senha incorreta";
+      return apresentacao.senha === opcoes.senhaDoMestre
+        ? { como: "mestre" }
+        : "Senha incorreta";
 
     case "jogador": {
       // A identidade do jogador é declarada, não provada: cinco pessoas na mesma
@@ -186,12 +232,24 @@ const TIPOS: readonly string[] = ["magia", "item", "monstro"];
 const ehConsulta = (consulta: unknown): consulta is Consulta => {
   if (typeof consulta !== "object" || consulta === null) return false;
   const { tipo, chave } = consulta as Record<string, unknown>;
-  return typeof chave === "string" && typeof tipo === "string" && TIPOS.includes(tipo);
+  return (
+    typeof chave === "string" &&
+    typeof tipo === "string" &&
+    TIPOS.includes(tipo)
+  );
 };
 
-type ComandoDoCliente = (comando: Comando, responder: (resposta: Resposta) => void) => void;
+type ComandoDoCliente = (
+  comando: Comando,
+  responder: (resposta: Resposta) => void,
+) => void;
 
-type ConsultaDoCliente = (consulta: Consulta, responder: (entrada: Entrada | null) => void) => void;
+type ConsultaDoCliente = (
+  consulta: Consulta,
+  responder: (entrada: Entrada | null) => void,
+) => void;
+
+type FichaDoCliente = (responder: (ficha: Ficha | null) => void) => void;
 
 type EventosDoServidor = {
   snapshot: (snapshot: Snapshot) => void;

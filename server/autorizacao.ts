@@ -4,30 +4,53 @@ import type { Identidade } from "../shared/identidade.js";
 /**
  * A regra, em uma linha: **o jogador só emite sobre si mesmo, e só
  * `AnotacaoAtualizada` e `IniciativaDeclarada`; todo o resto exige ser o
- * mestre.** Os dois Comandos de jogador chegam nas issues que os trazem; por
- * enquanto a tabela só tem Comandos de mestre.
+ * mestre.** A iniciativa chega na issue que a traz.
  *
  * A primeira metade — "sobre si mesmo" — não é checada aqui, e sim garantida
  * pela forma: o personagem de um Comando de jogador é sempre o do handshake,
  * porque o decisor recebe o autor do socket e o Comando não tem onde carregar
  * outro. Não há como escrever um Comando de jogador sobre um terceiro.
  */
-const QUEM_PODE: Record<TipoDeComando, Identidade["como"][]> = {
-  iniciarSessao: ["mestre"],
-  finalizarSessao: ["mestre"],
+const QUEM_PODE: Record<TipoDeComando, Identidade["como"]> = {
+  iniciarSessao: "mestre",
+  finalizarSessao: "mestre",
   // Vida é do mestre, inclusive a do próprio jogador: quem declara o que
   // aconteceu na mesa é ele.
-  alterarVida: ["mestre"],
-  concederVidaBonus: ["mestre"],
-  trocarCena: ["mestre"],
+  alterarVida: "mestre",
+  concederVidaBonus: "mestre",
+  // As Moedas são do mestre pelo mesmo motivo da vida: quem declara o que
+  // aconteceu na mesa é ele. O jogador lê o próprio bolso, e só.
+  alterarMoedas: "mestre",
+  trocarCena: "mestre",
+  // O bloco de notas é do jogador, e o mestre não escreve nele: ele lê tudo na
+  // tela de Log, que é outra coisa.
+  atualizarAnotacao: "jogador",
+  iniciarCombate: "mestre",
+  encerrarCombate: "mestre",
+  // A Fila é uma ordem escolhida, e quem escolhe é ele.
+  publicarFila: "mestre",
+  declararMonstros: "mestre",
+  // A segunda metade da regra: o jogador declara a **própria** iniciativa, e o
+  // Comando não tem onde carregar outro Participante.
+  declararIniciativa: "jogador",
+  declararIniciativaDoMonstro: "mestre",
 };
 
-export const autorizar = (identidade: Identidade, tipo: TipoDeComando): Resposta => {
+export const autorizar = (
+  identidade: Identidade,
+  tipo: TipoDeComando,
+): Resposta => {
   if (identidade.como === "mesa") {
-    return { aceito: false, motivo: "A tela da Mesa só lê: ela não envia Comandos" };
+    return {
+      aceito: false,
+      motivo: "A tela da Mesa só lê: ela não envia Comandos",
+    };
   }
-  if (!QUEM_PODE[tipo].includes(identidade.como)) {
-    return { aceito: false, motivo: `Só o mestre pode enviar '${tipo}'` };
+  // Um papel por Comando, e não uma lista: hoje toda linha da tabela tem um só,
+  // e uma lista seria a forma prometendo um caso que não existe.
+  const quem = QUEM_PODE[tipo];
+  if (identidade.como !== quem) {
+    return { aceito: false, motivo: `Só o ${quem} pode enviar '${tipo}'` };
   }
   return { aceito: true };
 };

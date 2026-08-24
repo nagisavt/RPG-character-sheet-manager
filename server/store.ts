@@ -20,12 +20,19 @@ type Opcoes = {
   agora?: () => string;
 };
 
-export const abrirStore = ({ caminho, agora = () => new Date().toISOString() }: Opcoes): Store => {
+export const abrirStore = ({
+  caminho,
+  agora = () => new Date().toISOString(),
+}: Opcoes): Store => {
   const banco = new DatabaseSync(caminho);
   criarEsquema(banco);
 
-  const inserir = banco.prepare("INSERT INTO eventos (timestamp, corpo) VALUES (?, ?)");
-  const selecionar = banco.prepare("SELECT id, timestamp, corpo FROM eventos ORDER BY id");
+  const inserir = banco.prepare(
+    "INSERT INTO eventos (timestamp, corpo) VALUES (?, ?)",
+  );
+  const selecionar = banco.prepare(
+    "SELECT id, timestamp, corpo FROM eventos ORDER BY id",
+  );
 
   return {
     gravar: (novo) => {
@@ -65,7 +72,7 @@ const criarEsquema = (banco: DatabaseSync): void => {
 };
 
 const hidratar = (linha: Record<string, unknown>): Evento => ({
-  ...(JSON.parse(String(linha["corpo"])) as EventoNovo),
-  id: Number(linha["id"]),
-  timestamp: String(linha["timestamp"]),
+  ...(JSON.parse(String(linha.corpo)) as EventoNovo),
+  id: Number(linha.id),
+  timestamp: String(linha.timestamp),
 });
