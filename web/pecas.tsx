@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import type { Personagem } from "../shared/tipos.js";
 
 /**
@@ -18,6 +18,10 @@ import type { Personagem } from "../shared/tipos.js";
  */
 export const BarraDeVida = ({ personagem }: { personagem: Personagem }) => (
   <>
+    {/* biome-ignore lint/a11y/useSemanticElements: `<meter>` tem desenho nativo
+        do navegador, que muda de navegador para navegador e resiste a ser
+        sobrescrito. A barra de vida é pintada por nós; o papel de meter é o que
+        a leitora de tela precisa. */}
     <div
       className="barra"
       role="meter"
@@ -32,6 +36,7 @@ export const BarraDeVida = ({ personagem }: { personagem: Personagem }) => (
     </div>
 
     {personagem.vidaBonus > 0 && (
+      // biome-ignore lint/a11y/useSemanticElements: mesmo motivo da barra de cima.
       <div
         className="barra bonus"
         role="meter"
@@ -101,7 +106,7 @@ export const ImagemOuRotulo = ({
   const [faltando, setFaltando] = useState(false);
 
   // Trocou de arquivo: o próximo tem o direito de existir.
-  useEffect(() => setFaltando(false), [caminho]);
+  useEffect(() => setFaltando(false), []);
 
   return (
     <span className={className}>

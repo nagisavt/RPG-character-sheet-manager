@@ -1,10 +1,10 @@
 import {
-  useEffect,
-  useRef,
-  useState,
   type FormEvent,
   type ReactNode,
   type Ref,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
 import type {
   Consulta,
@@ -414,6 +414,11 @@ const Prateleira = ({
           {linhas.map(({ chave, quantidade }, ordem) => (
             // A mesma chave pode aparecer duas vezes na Ficha — duas pilhas da
             // mesma corda —, então quem separa as linhas é a ordem, não a chave.
+            // O preço é o do índice na chave: se a lista reordenar, o React
+            // remonta o `<li>`. Hoje ele não custa nada — a linha não guarda
+            // estado, e a prateleira só é redesenhada quando a assinatura muda.
+            // A saída de verdade é a pilha ganhar id próprio no modelo.
+            // biome-ignore lint/suspicious/noArrayIndexKey: ver acima.
             <li key={`${ordem}-${chave}`}>
               <button type="button" onClick={() => setAberta(chave)}>
                 <ImagemOuRotulo
