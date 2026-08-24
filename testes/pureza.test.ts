@@ -41,7 +41,7 @@ describe("nada de rede durante a Sessão", () => {
   it(`só o ${SEED} fala com a internet`, async () => {
     const fontes = [...(await listar("server")), ...(await listar("shared"))];
 
-    expect(fontes).toContain(SEED);
+    expect(fontes).not.toContain(SEED);
 
     for (const caminho of fontes.filter((fonte) => fonte !== SEED)) {
       expect(await semComentarios(caminho), caminho).not.toMatch(
