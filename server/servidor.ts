@@ -1,22 +1,22 @@
 import {
   createServer,
   type IncomingMessage,
-  type Server as ServidorHttp,
   type ServerResponse,
+  type Server as ServidorHttp,
 } from "node:http";
 import { Server as ServidorSocket, type Socket } from "socket.io";
 import type { Consulta, Entrada, TipoDoCatalogo } from "../shared/catalogo.js";
 import type { Comando, Resposta } from "../shared/comandos.js";
 import { estadoInicial } from "../shared/estado.js";
 import {
-  autorDe,
   type Apresentacao,
+  autorDe,
   type Identidade,
   type Snapshot,
   type Transmissao,
 } from "../shared/identidade.js";
 import { reconstruir, reducer } from "../shared/reducer.js";
-import { MESA_ID, type Estado, type Ficha } from "../shared/tipos.js";
+import { type Estado, type Ficha, MESA_ID } from "../shared/tipos.js";
 import { podeVer, projetar } from "./audiencia.js";
 import { autorizar } from "./autorizacao.js";
 import { abrirCatalogo } from "./catalogo.js";

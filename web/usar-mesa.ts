@@ -9,7 +9,7 @@ import type {
 } from "../shared/identidade.js";
 import { lerLinha } from "../shared/linha-de-comando.js";
 import { reducer } from "../shared/reducer.js";
-import { MESA_ID, type Estado, type Ficha } from "../shared/tipos.js";
+import { type Estado, type Ficha, MESA_ID } from "../shared/tipos.js";
 
 /**
  * A ligação de uma tela com a Mesa. É o outro lado exato do harness de teste:

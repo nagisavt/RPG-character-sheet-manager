@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -5,9 +6,9 @@ import {
   corda,
   misselMagico,
 } from "../harness/catalogo-exemplo.js";
-import { faltam, nomeDe } from "../shared/combate.js";
 import { criarMesa, type Mesa } from "../harness/criar-mesa.js";
 import { elara, fichasDeExemplo, thorin } from "../harness/fichas-exemplo.js";
+import { faltam, nomeDe } from "../shared/combate.js";
 
 let mesa: Mesa;
 
@@ -63,7 +64,7 @@ describe("Vida", () => {
       diferenca: -8,
     });
 
-    expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
+    expect(tv.estado.personagens.thorin?.vida).toBe(20);
     expect(tv.eventos.at(-1)).toMatchObject({
       tipo: "VidaAlterada",
       personagem: "thorin",
@@ -89,7 +90,7 @@ describe("Vida", () => {
       diferenca: 30,
     });
 
-    expect(tv.estado.personagens["thorin"]?.vida).toBe(28);
+    expect(tv.estado.personagens.thorin?.vida).toBe(28);
     // A cura de 30 aconteceu; 5 se perderam no teto, e o Log conta as duas coisas.
     expect(tv.eventos.at(-1)).toMatchObject({ declarado: 30, vida: 28 });
   });
@@ -106,7 +107,7 @@ describe("Vida", () => {
       diferenca: -99,
     });
 
-    expect(tv.estado.personagens["thorin"]?.vida).toBe(0);
+    expect(tv.estado.personagens.thorin?.vida).toBe(0);
     expect(tv.eventos.at(-1)).toMatchObject({ declarado: -99, vida: 0 });
   });
 
@@ -122,7 +123,7 @@ describe("Vida", () => {
       diferenca: -8,
     });
 
-    expect(tv.estado.personagens["elara"]?.vida).toBe(22);
+    expect(tv.estado.personagens.elara?.vida).toBe(22);
   });
 
   it("recusa um personagem que não está nas Fichas, sem gravar nada", async () => {
@@ -161,7 +162,7 @@ describe("Vida", () => {
       aceito: false,
       motivo: "Só o mestre pode enviar 'alterarVida'",
     });
-    expect(celular.estado.personagens["thorin"]?.vida).toBe(28);
+    expect(celular.estado.personagens.thorin?.vida).toBe(28);
   });
 });
 
@@ -179,7 +180,7 @@ describe("Vida bônus", () => {
     });
 
     // A vida não se mexe: a Vida bônus é o segundo pote, não vida a mais.
-    expect(tv.estado.personagens["thorin"]).toMatchObject({
+    expect(tv.estado.personagens.thorin).toMatchObject({
       vida: 28,
       vidaBonus: 10,
     });
@@ -208,7 +209,7 @@ describe("Vida bônus", () => {
     });
 
     // Acumular ou não é decisão do mestre, não do app: ele declara onde ficou.
-    expect(tv.estado.personagens["thorin"]?.vidaBonus).toBe(4);
+    expect(tv.estado.personagens.thorin?.vidaBonus).toBe(4);
   });
 
   it("o dano consome a Vida bônus antes de encostar na vida", async () => {
@@ -228,7 +229,7 @@ describe("Vida bônus", () => {
       diferenca: -6,
     });
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({
+    expect(tv.estado.personagens.thorin).toMatchObject({
       vida: 28,
       vidaBonus: 4,
     });
@@ -251,7 +252,7 @@ describe("Vida bônus", () => {
       diferenca: -18,
     });
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({
+    expect(tv.estado.personagens.thorin).toMatchObject({
       vida: 20,
       vidaBonus: 0,
     });
@@ -286,7 +287,7 @@ describe("Vida bônus", () => {
       diferenca: 4,
     });
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({
+    expect(tv.estado.personagens.thorin).toMatchObject({
       vida: 28,
       vidaBonus: 0,
     });
@@ -310,7 +311,7 @@ describe("Vida bônus", () => {
     });
 
     expect(resposta).toEqual({ aceito: true });
-    expect(tv.estado.personagens["thorin"]?.vidaBonus).toBe(0);
+    expect(tv.estado.personagens.thorin?.vidaBonus).toBe(0);
   });
 
   it("recusa uma Vida bônus negativa, sem gravar nada", async () => {
@@ -367,7 +368,7 @@ describe("Vida bônus", () => {
       aceito: false,
       motivo: "Só o mestre pode enviar 'concederVidaBonus'",
     });
-    expect(celular.estado.personagens["thorin"]?.vidaBonus).toBe(0);
+    expect(celular.estado.personagens.thorin?.vidaBonus).toBe(0);
   });
 
   it("o celular do jogador vê a própria Vida bônus", async () => {
@@ -385,7 +386,7 @@ describe("Vida bônus", () => {
       vidaBonus: 7,
     });
 
-    expect(celular.estado.personagens["thorin"]?.vidaBonus).toBe(7);
+    expect(celular.estado.personagens.thorin?.vidaBonus).toBe(7);
   });
 
   it("não vem da Ficha: a Mesa começa a campanha sem Vida bônus nenhuma", async () => {
@@ -393,8 +394,8 @@ describe("Vida bônus", () => {
 
     const tv = await mesa.conectar({ como: "mesa" });
 
-    expect(tv.estado.personagens["thorin"]?.vidaBonus).toBe(0);
-    expect(tv.estado.personagens["elara"]?.vidaBonus).toBe(0);
+    expect(tv.estado.personagens.thorin?.vidaBonus).toBe(0);
+    expect(tv.estado.personagens.elara?.vidaBonus).toBe(0);
   });
 
   it("sobrevive ao reinício, porque ela está no Log", async () => {
@@ -416,7 +417,7 @@ describe("Vida bônus", () => {
 
     await mesa.reiniciar();
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({
+    expect(tv.estado.personagens.thorin).toMatchObject({
       vida: 28,
       vidaBonus: 4,
     });
@@ -1005,7 +1006,7 @@ describe("Fila de iniciativa", () => {
       diferenca: -8,
     });
 
-    expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
+    expect(tv.estado.personagens.thorin?.vida).toBe(20);
   });
 
   it("publicar de novo substitui a Fila inteira: é assim que o reforço entra", async () => {
@@ -1223,7 +1224,7 @@ describe("Moedas", () => {
       diferenca: 50,
     });
 
-    expect(celular.estado.personagens["thorin"]?.moedas).toBe(170);
+    expect(celular.estado.personagens.thorin?.moedas).toBe(170);
   });
 
   it("o Evento grava a diferença declarada e o resultado", async () => {
@@ -1257,7 +1258,7 @@ describe("Moedas", () => {
     });
 
     // Não vira uma dívida que o app passaria a carregar (ADR-0001).
-    expect(mestre.estado.personagens["elara"]?.moedas).toBe(0);
+    expect(mestre.estado.personagens.elara?.moedas).toBe(0);
     expect(mestre.eventos.at(-1)).toMatchObject({ declarado: -500, moedas: 0 });
   });
 
@@ -1266,8 +1267,8 @@ describe("Moedas", () => {
 
     const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
 
-    expect(mestre.estado.personagens["thorin"]?.moedas).toBe(120);
-    expect(mestre.estado.personagens["elara"]?.moedas).toBe(35);
+    expect(mestre.estado.personagens.thorin?.moedas).toBe(120);
+    expect(mestre.estado.personagens.elara?.moedas).toBe(35);
   });
 
   it("subir as Moedas da Ficha e reiniciar não devolve o que já foi gasto", async () => {
@@ -1280,14 +1281,14 @@ describe("Moedas", () => {
       personagem: "thorin",
       diferenca: -20,
     });
-    expect(mestre.estado.personagens["thorin"]?.moedas).toBe(100);
+    expect(mestre.estado.personagens.thorin?.moedas).toBe(100);
 
     // O mestre corrige a Ficha: ele tinha 200 no começo da campanha, não 120.
     await mesa.reiniciar([{ ...thorin, moedas: 200 }, elara]);
 
     // O gasto de vinte aconteceu, e o Evento diz onde o bolso ficou. Se ele
     // guardasse só a diferença, o replay teria dado 180 (ADR-0003).
-    expect(mestre.estado.personagens["thorin"]?.moedas).toBe(100);
+    expect(mestre.estado.personagens.thorin?.moedas).toBe(100);
   });
 
   it("recusa um personagem que não está nas Fichas, sem gravar nada", async () => {
@@ -1326,7 +1327,7 @@ describe("Moedas", () => {
       aceito: false,
       motivo: "Só o mestre pode enviar 'alterarMoedas'",
     });
-    expect(celular.estado.personagens["thorin"]?.moedas).toBe(120);
+    expect(celular.estado.personagens.thorin?.moedas).toBe(120);
   });
 
   it("'/ganha' e '/gasta': o sinal vem do verbo, e a quantidade é um número só", async () => {
@@ -1337,7 +1338,7 @@ describe("Moedas", () => {
     await mestre.digitar("/ganha thorin 50");
     await mestre.digitar("/gasta thorin 30");
 
-    expect(mestre.estado.personagens["thorin"]?.moedas).toBe(140);
+    expect(mestre.estado.personagens.thorin?.moedas).toBe(140);
   });
 
   it("'/gasta thorin 2po' não é quantidade: não existe denominação", async () => {
@@ -1362,7 +1363,7 @@ describe("Moedas", () => {
     await mestre.digitar("/gasta thorin 20");
     await mesa.reiniciar();
 
-    expect(mestre.estado.personagens["thorin"]?.moedas).toBe(100);
+    expect(mestre.estado.personagens.thorin?.moedas).toBe(100);
   });
 
   it("o bolso é de quem carrega: o colega não recebe o Evento nem o número", async () => {
@@ -1378,11 +1379,11 @@ describe("Moedas", () => {
       diferenca: 50,
     });
 
-    expect(dele.estado.personagens["thorin"]?.moedas).toBe(170);
+    expect(dele.estado.personagens.thorin?.moedas).toBe(170);
     // Nos Eventos recebidos, e não na tela: o número não chegou no aparelho dela.
     expect(dela.eventos).toEqual([]);
     // `null` e não zero: ela não sabe que ele está duro, ela não foi contada.
-    expect(dela.estado.personagens["thorin"]?.moedas).toBeNull();
+    expect(dela.estado.personagens.thorin?.moedas).toBeNull();
   });
 
   it("o snapshot também não leva: reconectar não conta o bolso do colega", async () => {
@@ -1398,8 +1399,8 @@ describe("Moedas", () => {
     });
     await dela.reconectar();
 
-    expect(dela.estado.personagens["elara"]?.moedas).toBe(35);
-    expect(dela.estado.personagens["thorin"]?.moedas).toBeNull();
+    expect(dela.estado.personagens.elara?.moedas).toBe(35);
+    expect(dela.estado.personagens.thorin?.moedas).toBeNull();
   });
 
   it("a TV não conta o bolso de ninguém: ela é a tela que a mesa olha junto", async () => {
@@ -1415,7 +1416,7 @@ describe("Moedas", () => {
     });
 
     expect(tv.eventos).toEqual([]);
-    expect(tv.estado.personagens["thorin"]?.moedas).toBeNull();
+    expect(tv.estado.personagens.thorin?.moedas).toBeNull();
   });
 });
 
@@ -1498,7 +1499,8 @@ describe("a Ficha do jogador", () => {
     });
 
     const ficha = await celular.minhaFicha();
-    const chave = ficha!.magias[0]!.chave;
+    const chave = ficha?.magias[0]?.chave;
+    assert(chave, "ficha de teste precisa ter ao menos uma magia");
 
     // A Ficha guarda a chave; a descrição sai do Catálogo, pelo mesmo socket.
     expect(await celular.consultar({ tipo: "magia", chave })).toEqual(
@@ -1599,7 +1601,7 @@ describe("a linha que o mestre digita", () => {
     const resposta = await mestre.digitar("/dano thorin 8");
 
     expect(resposta).toEqual({ aceito: true });
-    expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
+    expect(tv.estado.personagens.thorin?.vida).toBe(20);
   });
 
   it("'/cura thorin 5' sobe, e o sinal vem do verbo e não do número", async () => {
@@ -1611,7 +1613,7 @@ describe("a linha que o mestre digita", () => {
     await mestre.digitar("/dano thorin 10");
     await mestre.digitar("/cura thorin 5");
 
-    expect(tv.estado.personagens["thorin"]?.vida).toBe(23);
+    expect(tv.estado.personagens.thorin?.vida).toBe(23);
     expect(
       tv.eventos.map((evento) => "declarado" in evento && evento.declarado),
     ).toEqual([-10, 5]);
@@ -1625,7 +1627,7 @@ describe("a linha que o mestre digita", () => {
     const resposta = await mestre.digitar("/dano thorin -8");
 
     expect(resposta.aceito).toBe(false);
-    expect(mestre.estado.personagens["thorin"]?.vida).toBe(28);
+    expect(mestre.estado.personagens.thorin?.vida).toBe(28);
     expect(mestre.eventos).toEqual([]);
   });
 
@@ -1638,7 +1640,7 @@ describe("a linha que o mestre digita", () => {
     await mestre.digitar("/bonus thorin 10");
     await mestre.digitar("/dano thorin 6");
 
-    expect(tv.estado.personagens["thorin"]).toMatchObject({
+    expect(tv.estado.personagens.thorin).toMatchObject({
       vida: 28,
       vidaBonus: 4,
     });
@@ -1695,14 +1697,14 @@ describe("a Ficha editada entre duas subidas", () => {
     const tv = await mesa.conectar({ como: "mesa" });
 
     await mestre.digitar("/dano thorin 8");
-    expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
+    expect(tv.estado.personagens.thorin?.vida).toBe(20);
 
     // Thorin sobe de nível: o mestre edita `fichas/mesa.ts` e reinicia.
     await mesa.reiniciar([{ ...thorin, vidaMaxima: 35 }, elara]);
 
     // O teto subiu, o machucado continua o mesmo. Se o Evento guardasse só a
     // diferença, o replay teria recomeçado em 35 e dado 27.
-    expect(tv.estado.personagens["thorin"]).toEqual({
+    expect(tv.estado.personagens.thorin).toEqual({
       id: "thorin",
       nome: "Thorin",
       vida: 20,
@@ -1723,13 +1725,13 @@ describe("a Ficha editada entre duas subidas", () => {
     await mestre.digitar("/dano thorin 8");
     await mestre.digitar("/cura thorin 99");
     // Curou até o teto de janeiro, que era 28.
-    expect(tv.estado.personagens["thorin"]?.vida).toBe(28);
+    expect(tv.estado.personagens.thorin?.vida).toBe(28);
 
     await mesa.reiniciar([{ ...thorin, vidaMaxima: 35 }, elara]);
 
     // E continua sendo 28: aquela cura aconteceu quando o teto era 28, e o Log
     // não é reinterpretado à luz da Ficha de hoje.
-    expect(tv.estado.personagens["thorin"]?.vida).toBe(28);
+    expect(tv.estado.personagens.thorin?.vida).toBe(28);
   });
 
   it("corrigir um erro de digitação é editar o arquivo e reiniciar, sem gravar nada", async () => {
@@ -1742,7 +1744,7 @@ describe("a Ficha editada entre duas subidas", () => {
     // O nome estava escrito errado desde o começo da campanha.
     await mesa.reiniciar([{ ...thorin, nome: "Thorim" }, elara]);
 
-    expect(tv.estado.personagens["thorin"]?.nome).toBe("Thorim");
+    expect(tv.estado.personagens.thorin?.nome).toBe("Thorim");
     // E o Log não cresceu: não existe Comando de correção, e é por isso que não
     // existe tela de cadastro de Ficha entrando pela porta dos fundos.
     expect(mestre.eventos).toHaveLength(1);
@@ -1812,7 +1814,7 @@ describe("o Log", () => {
     // A Sessão continua em curso: o estado não estava no processo que caiu.
     expect(tv.estado.sessaoAtiva).toBe(true);
     // E as Fichas voltaram como posição inicial, sem terem virado Evento.
-    expect(tv.estado.personagens["thorin"]).toEqual({
+    expect(tv.estado.personagens.thorin).toEqual({
       id: "thorin",
       nome: "Thorin",
       vida: 28,
@@ -1862,7 +1864,7 @@ describe("o Log", () => {
 
     // Ele diz onde a vida ficou e não diz nada sobre a Vida bônus — então não
     // mexe nela. Nenhum `undefined` vaza para a barra da TV.
-    expect(tv.estado.personagens["thorin"]).toMatchObject({
+    expect(tv.estado.personagens.thorin).toMatchObject({
       vida: 20,
       vidaBonus: 10,
     });
@@ -1882,7 +1884,7 @@ describe("o Log", () => {
       );
       expect(() => sqlite.exec("DELETE FROM eventos")).toThrow(/append-only/);
       expect(
-        sqlite.prepare("SELECT COUNT(*) AS total FROM eventos").get()!["total"],
+        sqlite.prepare("SELECT COUNT(*) AS total FROM eventos").get()?.total,
       ).toBe(1);
     } finally {
       sqlite.close();
@@ -1923,7 +1925,7 @@ describe("Anotações privadas", () => {
       texto: "o taverneiro mentiu sobre o poço",
     });
 
-    expect(celular.estado.personagens["elara"]?.anotacao).toBe(
+    expect(celular.estado.personagens.elara?.anotacao).toBe(
       "o taverneiro mentiu sobre o poço",
     );
   });
@@ -1988,7 +1990,7 @@ describe("Anotações privadas", () => {
     // Nos Eventos recebidos, não na tela: o texto não está no navegador dele
     // para ser escondido por CSS nenhum.
     expect(dele.eventos).toEqual([]);
-    expect(dele.estado.personagens["elara"]?.anotacao).toBe("");
+    expect(dele.estado.personagens.elara?.anotacao).toBe("");
   });
 
   it("a TV também não recebe: ela fica no meio da mesa, virada para todo mundo", async () => {
@@ -2006,7 +2008,7 @@ describe("Anotações privadas", () => {
     });
 
     expect(tv.eventos).toEqual([]);
-    expect(tv.estado.personagens["elara"]?.anotacao).toBe("");
+    expect(tv.estado.personagens.elara?.anotacao).toBe("");
   });
 
   it("o mestre enxerga tudo: a tela de Log dele não filtra nada", async () => {
@@ -2027,7 +2029,7 @@ describe("Anotações privadas", () => {
       tipo: "AnotacaoAtualizada",
       personagem: "elara",
     });
-    expect(mestre.estado.personagens["elara"]?.anotacao).toBe(
+    expect(mestre.estado.personagens.elara?.anotacao).toBe(
       "vou trair o grupo no terceiro ato",
     );
   });
@@ -2048,10 +2050,8 @@ describe("Anotações privadas", () => {
     // vez. Se a projeção fosse só nos deltas, era aqui que vazava.
     await dele.reconectar();
 
-    expect(dele.estado.personagens["thorin"]?.anotacao).toBe(
-      "comprar corda nova",
-    );
-    expect(dele.estado.personagens["elara"]?.anotacao).toBe("");
+    expect(dele.estado.personagens.thorin?.anotacao).toBe("comprar corda nova");
+    expect(dele.estado.personagens.elara?.anotacao).toBe("");
   });
 
   it("o jogador não escreve no bloco do colega: o Comando não tem onde dizer de quem é", async () => {
@@ -2063,8 +2063,8 @@ describe("Anotações privadas", () => {
 
     // O personagem sai do socket, não do Comando. Não existe forma de escrever
     // um `atualizarAnotacao` sobre um terceiro.
-    expect(dele.estado.personagens["thorin"]?.anotacao).toBe("isto é meu");
-    expect(dele.estado.personagens["elara"]?.anotacao).toBe("");
+    expect(dele.estado.personagens.thorin?.anotacao).toBe("isto é meu");
+    expect(dele.estado.personagens.elara?.anotacao).toBe("");
   });
 
   it("o mestre não escreve no bloco de ninguém", async () => {
@@ -2095,7 +2095,7 @@ describe("Anotações privadas", () => {
     await celular.enviar({ tipo: "atualizarAnotacao", texto: "a porta range" });
     await mesa.reiniciar();
 
-    expect(celular.estado.personagens["elara"]?.anotacao).toBe("a porta range");
+    expect(celular.estado.personagens.elara?.anotacao).toBe("a porta range");
   });
 
   it("apagar o bloco é escrever nada nele, e isso também é um fato", async () => {
@@ -2109,7 +2109,7 @@ describe("Anotações privadas", () => {
     await celular.enviar({ tipo: "atualizarAnotacao", texto: "engano meu" });
     await celular.enviar({ tipo: "atualizarAnotacao", texto: "" });
 
-    expect(celular.estado.personagens["elara"]?.anotacao).toBe("");
+    expect(celular.estado.personagens.elara?.anotacao).toBe("");
     // O Log não perde o que foi escrito antes: apagar na tela não apaga o Log.
     expect(celular.eventos).toHaveLength(2);
   });

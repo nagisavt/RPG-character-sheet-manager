@@ -1,9 +1,9 @@
-import { useState, type Ref } from "react";
+import { type Ref, useState } from "react";
 import {
   chamada,
   chaveDe,
-  nomeDe,
   type NaChamada,
+  nomeDe,
 } from "../../shared/combate.js";
 import type { Combate, Estado, Participante } from "../../shared/tipos.js";
 

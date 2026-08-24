@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 import { fichasDaMesa } from "../fichas/mesa.js";
-import { acesos, ALTURA, LARGURA, quebrar } from "./fonte-de-pixel.js";
+import { ALTURA, acesos, LARGURA, quebrar } from "./fonte-de-pixel.js";
 
 /**
  * `npm run assets:placeholders`: um PNG preto para cada asset que a Ficha pede.

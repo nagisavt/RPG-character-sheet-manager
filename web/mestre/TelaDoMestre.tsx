@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent, type Ref } from "react";
+import { type FormEvent, type Ref, useEffect, useRef, useState } from "react";
 import type { Resposta } from "../../shared/comandos.js";
 import { VERBETES } from "../../shared/linha-de-comando.js";
 import type { Personagem } from "../../shared/tipos.js";
 import { BarraDeVida, Moedas, Numeros } from "../pecas.js";
-import { Combate } from "./Combate.js";
 import { usarMesa } from "../usar-mesa.js";
+import { Combate } from "./Combate.js";
 
 /**
  * O notebook do mestre. Ele entra com a senha, digita `/dano thorin 8` e vê a

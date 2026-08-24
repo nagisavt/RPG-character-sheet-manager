@@ -72,7 +72,7 @@ const criarEsquema = (banco: DatabaseSync): void => {
 };
 
 const hidratar = (linha: Record<string, unknown>): Evento => ({
-  ...(JSON.parse(String(linha["corpo"])) as EventoNovo),
-  id: Number(linha["id"]),
-  timestamp: String(linha["timestamp"]),
+  ...(JSON.parse(String(linha.corpo)) as EventoNovo),
+  id: Number(linha.id),
+  timestamp: String(linha.timestamp),
 });

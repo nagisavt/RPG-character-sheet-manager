@@ -1,5 +1,5 @@
-import { ehD20 } from "./combate.js";
 import type { Comando } from "./comandos.js";
+import { ehD20 } from "./combate.js";
 
 /**
  * A linha que o mestre digita, virando Comando. Puro: texto entra, Comando sai.

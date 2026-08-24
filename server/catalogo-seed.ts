@@ -45,7 +45,7 @@ const rotulo = (valor: unknown): string => {
   if (typeof valor === "string") return valor;
   if (typeof valor === "number") return String(valor);
   if (typeof valor === "object" && valor !== null)
-    return rotulo((valor as Bruto)["name"]);
+    return rotulo((valor as Bruto).name);
   return "";
 };
 
@@ -54,29 +54,29 @@ const numero = (valor: unknown): number | null =>
 
 const comoMagia = (bruto: Bruto): Entrada => ({
   tipo: "magia",
-  chave: rotulo(bruto["key"]),
-  nome: rotulo(bruto["name"]),
-  descricao: rotulo(bruto["desc"]),
+  chave: rotulo(bruto.key),
+  nome: rotulo(bruto.name),
+  descricao: rotulo(bruto.desc),
   detalhes: {
-    nivel: numero(bruto["level"]),
-    escola: rotulo(bruto["school"]),
-    execucao: rotulo(bruto["casting_time"]),
-    alcance: rotulo(bruto["range_text"]),
-    duracao: rotulo(bruto["duration"]),
-    concentracao: bruto["concentration"] === true,
-    ritual: bruto["ritual"] === true,
+    nivel: numero(bruto.level),
+    escola: rotulo(bruto.school),
+    execucao: rotulo(bruto.casting_time),
+    alcance: rotulo(bruto.range_text),
+    duracao: rotulo(bruto.duration),
+    concentracao: bruto.concentration === true,
+    ritual: bruto.ritual === true,
   },
 });
 
 const comoItem = (bruto: Bruto): Entrada => ({
   tipo: "item",
-  chave: rotulo(bruto["key"]),
-  nome: rotulo(bruto["name"]),
-  descricao: rotulo(bruto["desc"]),
+  chave: rotulo(bruto.key),
+  nome: rotulo(bruto.name),
+  descricao: rotulo(bruto.desc),
   detalhes: {
-    categoria: rotulo(bruto["category"]),
-    custo: rotulo(bruto["cost"]),
-    peso: rotulo(bruto["weight"]),
+    categoria: rotulo(bruto.category),
+    custo: rotulo(bruto.cost),
+    peso: rotulo(bruto.weight),
   },
 });
 
@@ -89,15 +89,15 @@ const comoItem = (bruto: Bruto): Entrada => ({
  * com nome e bônus, e não vem daqui (CONTEXT.md).
  */
 const comoMonstro = (bruto: Bruto): Entrada => {
-  const tipo = rotulo(bruto["type"]);
-  const tamanho = rotulo(bruto["size"]);
-  const nd = numero(bruto["challenge_rating"]);
-  const vida = numero(bruto["hit_points"]);
+  const tipo = rotulo(bruto.type);
+  const tamanho = rotulo(bruto.size);
+  const nd = numero(bruto.challenge_rating);
+  const vida = numero(bruto.hit_points);
 
   return {
     tipo: "monstro",
-    chave: rotulo(bruto["key"]),
-    nome: rotulo(bruto["name"]),
+    chave: rotulo(bruto.key),
+    nome: rotulo(bruto.name),
     descricao:
       [tipo, tamanho].filter(Boolean).join(" ") +
       (nd === null ? "" : `, ND ${nd}`),

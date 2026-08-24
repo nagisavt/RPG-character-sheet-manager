@@ -40,9 +40,7 @@ export const abrirCatalogo = (caminho: string): Catalogo => {
         monstro: 0,
       };
       for (const linha of totais.all()) {
-        zerado[String(linha["tipo"]) as TipoDoCatalogo] = Number(
-          linha["total"],
-        );
+        zerado[String(linha.tipo) as TipoDoCatalogo] = Number(linha.total);
       }
       return zerado;
     },
@@ -90,9 +88,9 @@ export const semear = (
 };
 
 const hidratar = (linha: Record<string, unknown>): Entrada => ({
-  tipo: String(linha["tipo"]) as TipoDoCatalogo,
-  chave: String(linha["chave"]),
-  nome: String(linha["nome"]),
-  descricao: String(linha["descricao"]),
-  detalhes: JSON.parse(String(linha["detalhes"])) as Entrada["detalhes"],
+  tipo: String(linha.tipo) as TipoDoCatalogo,
+  chave: String(linha.chave),
+  nome: String(linha.nome),
+  descricao: String(linha.descricao),
+  detalhes: JSON.parse(String(linha.detalhes)) as Entrada["detalhes"],
 });

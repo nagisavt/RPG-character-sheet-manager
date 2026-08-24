@@ -20,11 +20,11 @@ try {
   // Sem `.env`. A conferência da senha logo abaixo é quem decide se dá para subir.
 }
 
-const PORTA = Number(process.env["PORTA"] ?? 3000);
+const PORTA = Number(process.env.PORTA ?? 3000);
 
 // A senha não tem default: um default é uma senha pública, e `/mestre` é a tela
 // que declara o que aconteceu na Mesa.
-const SENHA_MESTRE = process.env["SENHA_MESTRE"];
+const SENHA_MESTRE = process.env.SENHA_MESTRE;
 if (SENHA_MESTRE === undefined || SENHA_MESTRE === "") {
   console.error(
     "Falta SENHA_MESTRE: a senha do mestre vem do ambiente, não do código.",

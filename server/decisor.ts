@@ -1,5 +1,5 @@
-import { chamada, chaveDe, ehD20 } from "../shared/combate.js";
 import type { Comando } from "../shared/comandos.js";
+import { chamada, chaveDe, ehD20 } from "../shared/combate.js";
 import type {
   Autor,
   Combate,

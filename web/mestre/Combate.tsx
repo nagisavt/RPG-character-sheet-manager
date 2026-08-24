@@ -1,6 +1,6 @@
-import { useRef, useState, type FormEvent, type Ref } from "react";
-import { chamada, chaveDe, nomeDe } from "../../shared/combate.js";
+import { type FormEvent, type Ref, useRef, useState } from "react";
 import type { Comando, Resposta } from "../../shared/comandos.js";
+import { chamada, chaveDe, nomeDe } from "../../shared/combate.js";
 import type {
   Estado,
   Iniciativa,
