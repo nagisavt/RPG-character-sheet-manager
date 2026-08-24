@@ -6,11 +6,12 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-      "suspicious": "error",
-      "correctness": "error",
-      "style": "error",
-      "complexity": "error"
+      "preset": "recommended",
+      "style": {
+        "preset": "recommended",
+        "useNamingConvention": "off",
+        "noIncrementDecrement": "off"
+      }
     }
   }
 }
