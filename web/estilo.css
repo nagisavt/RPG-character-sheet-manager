@@ -760,3 +760,21 @@ span.voltar {
   color: var(--apagado);
   font-variant-numeric: tabular-nums;
 }
+
+/* A seção que caiu, no lugar onde ela estava: o mestre precisa saber o que
+   parou de funcionar, e o resto da tela continua valendo. */
+.caiu {
+  margin-top: 2rem;
+  border: 1px solid var(--recusa);
+  border-radius: 0.375rem;
+  padding: 1rem;
+}
+
+.caiu p {
+  margin: 0;
+}
+
+.caiu .apagado {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
