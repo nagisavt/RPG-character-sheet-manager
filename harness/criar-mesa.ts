@@ -10,10 +10,12 @@ import type { Comando, Resposta } from "../shared/comandos.js";
 import type {
   Credencial,
   Handshake,
+  LogDaMesa,
   Snapshot,
   Transmissao,
 } from "../shared/identidade.js";
 import { lerLinha } from "../shared/linha-de-comando.js";
+import { type Linha, ler } from "../shared/log.js";
 import { reducer } from "../shared/reducer.js";
 import {
   type Estado,
@@ -66,6 +68,12 @@ export type Cliente = {
    * ninguém, e o mestre lê as Fichas do arquivo, que é dele.
    */
   minhaFicha: () => Promise<Ficha | null>;
+  /**
+   * O Log em português, como a tela do mestre o lê — pedido ao servidor e
+   * dobrado aqui pelo mesmo `ler` de `shared/`. `null` para quem não é o mestre:
+   * o Log não sai do servidor para mais ninguém.
+   */
+  log: () => Promise<readonly Linha[] | null>;
   /** O celular que dormiu e acordou: cai e volta sozinho, com o servidor no ar. */
   reconectar: () => Promise<void>;
   desconectar: () => void;
@@ -231,6 +239,10 @@ const conectarCliente = async (
     enviar,
     consultar: (consulta) => socket.emitWithAck("consultar", consulta),
     minhaFicha: () => socket.emitWithAck("minhaFicha"),
+    log: async () => {
+      const log: LogDaMesa | null = await socket.emitWithAck("log");
+      return log === null ? null : ler(log.inicial, log.eventos);
+    },
     digitar: async (linha) => {
       const leitura = lerLinha(linha);
       // Uma linha que não é comando é uma recusa como outra qualquer para quem

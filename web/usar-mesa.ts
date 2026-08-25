@@ -4,6 +4,7 @@ import type { Consulta, Entrada } from "../shared/catalogo.js";
 import type { Comando, Resposta } from "../shared/comandos.js";
 import type {
   Credencial,
+  LogDaMesa,
   Snapshot,
   Transmissao,
 } from "../shared/identidade.js";
@@ -20,7 +21,17 @@ export type Ligacao =
   | { situacao: "na porta" }
   | { situacao: "entrando" }
   | { situacao: "recusado"; motivo: string }
-  | { situacao: "na mesa"; estado: Estado };
+  | {
+      situacao: "na mesa";
+      estado: Estado;
+      /**
+       * Até onde do Log esta tela já está em dia. Vem do servidor, no snapshot e
+       * em cada transmissão, e é o que diz para a tela de Log do mestre que o
+       * Log cresceu — inclusive quando o Evento que o fez crescer não muda nada
+       * que se veja na tela.
+       */
+      ate: number;
+    };
 
 export const usarMesa = () => {
   const [ligacao, setLigacao] = useState<Ligacao>({ situacao: "na porta" });
@@ -43,17 +54,19 @@ export const usarMesa = () => {
     });
 
     // Na (re)conexão vem o snapshot completo já filtrado, e depois só deltas.
-    ligado.on("snapshot", ({ estado }: Snapshot) =>
-      setLigacao({ situacao: "na mesa", estado }),
+    ligado.on("snapshot", ({ estado, ate }: Snapshot) =>
+      setLigacao({ situacao: "na mesa", estado, ate }),
     );
 
-    ligado.on("transmissao", ({ evento }: Transmissao) => {
-      if (evento === null) return;
-      setLigacao((anterior) =>
-        anterior.situacao === "na mesa"
-          ? { ...anterior, estado: reducer(anterior.estado, evento) }
-          : anterior,
-      );
+    ligado.on("transmissao", ({ ate, evento }: Transmissao) => {
+      setLigacao((anterior) => {
+        if (anterior.situacao !== "na mesa") return anterior;
+        // O `ate` anda mesmo quando o Evento não veio: esta tela não tinha
+        // direito de vê-lo, e o número de ordem é a única coisa que atravessa.
+        const estado =
+          evento === null ? anterior.estado : reducer(anterior.estado, evento);
+        return { ...anterior, estado, ate };
+      });
     });
   }, []);
 
@@ -98,5 +111,19 @@ export const usarMesa = () => {
     [],
   );
 
-  return { ligacao, entrar, enviar, digitar, consultar, minhaFicha };
+  /**
+   * O Log inteiro, para a tela do mestre. `null` em qualquer outra tela: ele não
+   * sai do servidor para mais ninguém, e a porta é lá.
+   *
+   * Vem inteiro a cada pedido, sem `desde`: o Log de uma campanha cabe folgado
+   * numa mensagem, e uma segunda cópia mantida em dia aqui seria uma segunda
+   * verdade sobre o que aconteceu.
+   */
+  const pedirLog = useCallback(
+    async (): Promise<LogDaMesa | null> =>
+      (await socket.current?.emitWithAck("log")) ?? null,
+    [],
+  );
+
+  return { ligacao, entrar, enviar, digitar, consultar, minhaFicha, pedirLog };
 };

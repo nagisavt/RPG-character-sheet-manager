@@ -12,6 +12,7 @@ import {
   type Apresentacao,
   autorDe,
   type Identidade,
+  type LogDaMesa,
   type Snapshot,
   type Transmissao,
 } from "../shared/identidade.js";
@@ -80,6 +81,7 @@ export const iniciarServidor = async (
       comando: ComandoDoCliente;
       consultar: ConsultaDoCliente;
       minhaFicha: FichaDoCliente;
+      log: LogDoCliente;
     },
     EventosDoServidor,
     never,
@@ -123,6 +125,19 @@ export const iniciarServidor = async (
     // amarrado no socket, e é por isso que não existe pedir a Ficha do colega.
     socket.on("minhaFicha", (responder) =>
       responder(fichaDe(socket.data.identidade)),
+    );
+    // O Log inteiro, e só para o mestre. Não é Comando e não muda nada: é a
+    // leitura do que já aconteceu.
+    //
+    // Sai **sem projeção**, com o que é privado dos jogadores dentro, porque é
+    // isso que a tela de Log dele é. A porta é fechada aqui, uma vez, pela
+    // identidade do socket — e não na tela, que é do outro lado da rede.
+    socket.on("log", (responder) =>
+      responder(
+        socket.data.identidade.como === "mestre"
+          ? { inicial: estadoInicial(opcoes.fichas), eventos: store.ler() }
+          : null,
+      ),
     );
   });
 
@@ -250,6 +265,8 @@ type ConsultaDoCliente = (
 ) => void;
 
 type FichaDoCliente = (responder: (ficha: Ficha | null) => void) => void;
+
+type LogDoCliente = (responder: (log: LogDaMesa | null) => void) => void;
 
 type EventosDoServidor = {
   snapshot: (snapshot: Snapshot) => void;
