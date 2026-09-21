@@ -2,19 +2,22 @@ import { type FormEvent, type Ref, useEffect, useRef, useState } from "react";
 import type { Resposta } from "../../shared/comandos.js";
 import { VERBETES } from "../../shared/linha-de-comando.js";
 import type { Personagem } from "../../shared/tipos.js";
+import { Barreira } from "../barreira.js";
 import { BarraDeVida, Moedas, Numeros } from "../pecas.js";
 import { usarMesa } from "../usar-mesa.js";
 import { Combate } from "./Combate.js";
+import { Log } from "./Log.js";
 
 /**
  * O notebook do mestre. Ele entra com a senha, digita `/dano thorin 8` e vê a
  * vida cair — ou toca nos botões, que é o que se usa com o livro na outra mão.
  *
- * A tela de Log inteira é a issue #12; aqui só aparece a resposta do último
- * Comando, que é o que diz se ele foi aceito.
+ * Embaixo, fixo, o Log da noite: o que ele registrou, em português, sem filtro
+ * de audiência nenhum. A resposta do último Comando fica logo acima dele, que é
+ * o que diz se ele foi aceito.
  */
 export const TelaDoMestre = () => {
-  const { ligacao, entrar, enviar, digitar } = usarMesa();
+  const { ligacao, entrar, enviar, digitar, pedirLog } = usarMesa();
   const [resposta, setResposta] = useState<Resposta | null>(null);
 
   if (ligacao.situacao !== "na mesa") {
@@ -40,25 +43,32 @@ export const TelaDoMestre = () => {
         </span>
       </header>
 
-      <ul className="personagens">
-        {personagens.map((personagem) => (
-          <Painel
-            key={personagem.id}
-            personagem={personagem}
-            alterar={async (diferenca) =>
-              setResposta(
-                await enviar({
-                  tipo: "alterarVida",
-                  personagem: personagem.id,
-                  diferenca,
-                }),
-              )
-            }
-          />
-        ))}
-      </ul>
+      {/* Cada seção na sua cerca: a que cair cai sozinha. A linha de comando
+          fica fora de propósito — ela é o último recurso do mestre, e é o que
+          tem que continuar de pé mesmo quando o resto da tela não está. */}
+      <Barreira nome="personagens">
+        <ul className="personagens">
+          {personagens.map((personagem) => (
+            <Painel
+              key={personagem.id}
+              personagem={personagem}
+              alterar={async (diferenca) =>
+                setResposta(
+                  await enviar({
+                    tipo: "alterarVida",
+                    personagem: personagem.id,
+                    diferenca,
+                  }),
+                )
+              }
+            />
+          ))}
+        </ul>
+      </Barreira>
 
-      <Combate estado={ligacao.estado} enviar={enviar} />
+      <Barreira nome="Combate">
+        <Combate estado={ligacao.estado} enviar={enviar} />
+      </Barreira>
 
       <LinhaDeComando
         digitar={async (linha) => setResposta(await digitar(linha))}
@@ -71,6 +81,10 @@ export const TelaDoMestre = () => {
           {resposta.aceito ? "aceito" : resposta.motivo}
         </p>
       )}
+
+      <Barreira nome="Log">
+        <Log ate={ligacao.ate} pedirLog={pedirLog} />
+      </Barreira>
     </main>
   );
 };

@@ -6,9 +6,10 @@ import {
   corda,
   misselMagico,
 } from "../harness/catalogo-exemplo.js";
-import { criarMesa, type Mesa } from "../harness/criar-mesa.js";
+import { type Cliente, criarMesa, type Mesa } from "../harness/criar-mesa.js";
 import { elara, fichasDeExemplo, thorin } from "../harness/fichas-exemplo.js";
 import { faltam, nomeDe } from "../shared/combate.js";
+import { daSessaoAtual, type Linha } from "../shared/log.js";
 
 let mesa: Mesa;
 
@@ -2150,5 +2151,229 @@ describe("reconexão", () => {
 
     // O snapshot é completo, não um replay dos deltas perdidos.
     expect(celular.estado.sessaoAtiva).toBe(true);
+  });
+});
+
+describe("a tela de Log do mestre", () => {
+  const textos = (linhas: readonly Linha[]) =>
+    linhas.map((linha) => linha.texto);
+
+  const abrirOLog = async (cliente: Cliente) => {
+    const linhas = await cliente.log();
+    assert(linhas !== null, "esta tela não recebeu o Log");
+    return linhas;
+  };
+
+  it("lê o Log em português, com a diferença declarada e o resultado", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    await mestre.enviar({ tipo: "iniciarSessao" });
+    await mestre.digitar("/dano thorin 3");
+    // A cena do ADR-0003: uma cura de 8 em quem está a 3 do teto. O Log conta as
+    // duas coisas, e é assim que se vê que cinco se perderam.
+    await mestre.digitar("/cura thorin 8");
+
+    expect(textos(await abrirOLog(mestre))).toEqual([
+      "Sessão iniciada",
+      "Thorin: dano 3 (28 → 25)",
+      "Thorin: cura 8 (25 → 28)",
+    ]);
+  });
+
+  it("o sinal da diferença decide o texto, e não o tamanho dela", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: -12,
+    });
+    await mestre.enviar({
+      tipo: "alterarVida",
+      personagem: "thorin",
+      diferenca: 5,
+    });
+
+    expect(textos(await abrirOLog(mestre))).toEqual([
+      "Thorin: dano 12 (28 → 16)",
+      "Thorin: cura 5 (16 → 21)",
+    ]);
+  });
+
+  it("a Sessão atual aparece por padrão, e a campanha inteira quando ele pede", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    await mestre.enviar({ tipo: "iniciarSessao" });
+    await mestre.digitar("/dano thorin 8");
+    await mestre.enviar({ tipo: "finalizarSessao" });
+    await mestre.enviar({ tipo: "iniciarSessao" });
+    await mestre.digitar("/cura thorin 3");
+
+    const linhas = await abrirOLog(mestre);
+
+    // A noite de hoje, que é o que ele olha enquanto joga...
+    expect(textos(daSessaoAtual(linhas))).toEqual([
+      "Sessão iniciada",
+      "Thorin: cura 3 (20 → 23)",
+    ]);
+
+    // ...e a campanha inteira, que continua inteira.
+    expect(textos(linhas)).toEqual([
+      "Sessão iniciada",
+      "Thorin: dano 8 (28 → 20)",
+      "Sessão finalizada",
+      "Sessão iniciada",
+      "Thorin: cura 3 (20 → 23)",
+    ]);
+  });
+
+  it("a noite finalizada continua na tela até a seguinte começar", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    await mestre.enviar({ tipo: "iniciarSessao" });
+    await mestre.digitar("/dano thorin 8");
+    await mestre.enviar({ tipo: "finalizarSessao" });
+    // Guardar as Moedas depois de a noite fechar é um fato da mesma noite: o
+    // mestre acabou de anotar, e a tela dele não pode limpar embaixo da mão.
+    await mestre.digitar("/ganha thorin 40");
+
+    expect(textos(daSessaoAtual(await abrirOLog(mestre)))).toEqual([
+      "Sessão iniciada",
+      "Thorin: dano 8 (28 → 20)",
+      "Sessão finalizada",
+      "Thorin: ganha 40 (120 → 160)",
+    ]);
+  });
+
+  it("o corte por Sessão é só de leitura: o estado é a soma de todos os Eventos", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "iniciarSessao" });
+    await mestre.digitar("/dano thorin 8");
+    await mestre.enviar({ tipo: "finalizarSessao" });
+    await mestre.enviar({ tipo: "iniciarSessao" });
+
+    // O dano da noite passada não está na tela de hoje, e continua na vida dele.
+    expect(textos(daSessaoAtual(await abrirOLog(mestre)))).toEqual([
+      "Sessão iniciada",
+    ]);
+    expect(tv.estado.personagens["thorin"]?.vida).toBe(20);
+  });
+
+  it("não aplica filtro de audiência: o que é privado do jogador está lá", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
+
+    await celular.enviar({
+      tipo: "atualizarAnotacao",
+      texto: "o taverneiro mentiu",
+    });
+    await mestre.digitar("/gasta thorin 30");
+
+    expect(textos(await abrirOLog(mestre))).toEqual([
+      'Elara: anotação — "o taverneiro mentiu"',
+      "Thorin: gasta 30 (120 → 90)",
+    ]);
+  });
+
+  it("só o mestre abre o Log: nem o celular nem a TV o recebem", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "thorin",
+    });
+    const tv = await mesa.conectar({ como: "mesa" });
+
+    await mestre.enviar({ tipo: "iniciarSessao" });
+
+    expect(await celular.log()).toBeNull();
+    expect(await tv.log()).toBeNull();
+  });
+
+  it("o Log nunca é apagado nem arquivado: a campanha inteira sobrevive ao reinício", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    await mestre.enviar({ tipo: "iniciarSessao" });
+    await mestre.digitar("/dano thorin 8");
+    await mestre.enviar({ tipo: "finalizarSessao" });
+
+    await mesa.reiniciar();
+
+    expect(textos(await abrirOLog(mestre))).toEqual([
+      "Sessão iniciada",
+      "Thorin: dano 8 (28 → 20)",
+      "Sessão finalizada",
+    ]);
+  });
+
+  it("lê a noite inteira: Cena, Combate, iniciativas e Fila em português", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+    const celular = await mesa.conectar({
+      como: "jogador",
+      personagem: "elara",
+    });
+
+    await mestre.enviar({ tipo: "trocarCena", cena: "taverna-do-javali" });
+    await mestre.enviar({
+      tipo: "concederVidaBonus",
+      personagem: "elara",
+      vidaBonus: 10,
+    });
+    await mestre.enviar({ tipo: "iniciarCombate" });
+    await mestre.enviar({
+      tipo: "declararMonstros",
+      monstros: [{ nome: "Goblin", quantidade: 3, bonusDeIniciativa: 2 }],
+    });
+    await celular.enviar({ tipo: "declararIniciativa", d20: 14 });
+    await mestre.enviar({
+      tipo: "declararIniciativaDoMonstro",
+      nome: "Goblin",
+      d20: 9,
+    });
+    await mestre.enviar({
+      tipo: "publicarFila",
+      fila: [
+        { tipo: "personagem", personagem: "elara" },
+        { tipo: "monstro", nome: "Goblin" },
+      ],
+    });
+    await mestre.enviar({ tipo: "encerrarCombate" });
+
+    expect(textos(await abrirOLog(mestre))).toEqual([
+      "Cena: taverna-do-javali",
+      "Elara: vida bônus 10",
+      "Combate iniciado",
+      "Monstros: Goblin ×3",
+      "Elara: iniciativa 17 (d20 14)",
+      "Goblin ×3: iniciativa 11 (d20 9)",
+      "Fila: Elara, Goblin ×3",
+      "Combate encerrado",
+    ]);
+  });
+
+  it("o dano que come a Vida bônus conta os dois potes", async () => {
+    mesa = await criarMesa({ fichas: fichasDeExemplo });
+    const mestre = await mesa.conectar({ como: "mestre", senha: "1234" });
+
+    await mestre.digitar("/bonus thorin 10");
+    await mestre.digitar("/dano thorin 4");
+
+    expect(textos(await abrirOLog(mestre))).toEqual([
+      "Thorin: vida bônus 10",
+      "Thorin: dano 4 (28 → 28; vida bônus 10 → 6)",
+    ]);
   });
 });

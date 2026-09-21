@@ -51,6 +51,19 @@ export const autorDe = (identidade: Identidade): Autor | null => {
 export type Snapshot = { estado: Estado; ate: number };
 
 /**
+ * O Log como ele sai do servidor para o notebook do mestre: os Eventos e a
+ * posição de onde eles partem.
+ *
+ * `inicial` vai junto porque um Evento sozinho não se lê — `cura 8` só vira
+ * `(25 → 28)` para quem replica o Log desde o começo (ADR-0003) —, e a posição
+ * inicial são as Fichas, que o mestre nunca recebeu por socket.
+ *
+ * Vai inteiro, sem projeção: quem não é o mestre não recebe isto de jeito
+ * nenhum, e para ele não há nada a esconder.
+ */
+export type LogDaMesa = { inicial: Estado; eventos: readonly Evento[] };
+
+/**
  * Um delta. `evento` vem `null` quando o socket não tem direito de ver o que
  * aconteceu: o conteúdo privado não sai do servidor, e só o número de ordem
  * atravessa, para que todo cliente saiba até onde já está em dia.

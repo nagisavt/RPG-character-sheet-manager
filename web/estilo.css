@@ -699,3 +699,82 @@ span.voltar {
 .acoes button {
   flex: 1;
 }
+
+/* ---------------------------------------------------------------------------
+ * O Log no notebook do mestre: a noite em português, embaixo de tudo.
+ * ------------------------------------------------------------------------- */
+
+.log {
+  margin-top: 2rem;
+  border-top: 1px solid var(--borda);
+  padding-top: 1.5rem;
+}
+
+.log header {
+  margin-bottom: 1rem;
+}
+
+.log h2 {
+  flex: 1;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+/* O corte é de leitura, não de estado: por isso ele fica no cabeçalho da
+   seção, e não junto dos botões que registram alguma coisa. */
+.corte {
+  display: flex;
+  gap: 1rem;
+  color: var(--apagado);
+  font-size: 0.875rem;
+}
+
+.corte label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.linhas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+  /* A noite inteira não cabe na tela, e o resto dela não pode empurrar a linha
+     de comando para fora do alcance do mestre. */
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.linhas li {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+  line-height: 1.4;
+}
+
+/* A hora é referência, não conteúdo: ela alinha em coluna e sai de cena. */
+.hora {
+  flex: none;
+  color: var(--apagado);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A seção que caiu, no lugar onde ela estava: o mestre precisa saber o que
+   parou de funcionar, e o resto da tela continua valendo. */
+.caiu {
+  margin-top: 2rem;
+  border: 1px solid var(--recusa);
+  border-radius: 0.375rem;
+  padding: 1rem;
+}
+
+.caiu p {
+  margin: 0;
+}
+
+.caiu .apagado {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
